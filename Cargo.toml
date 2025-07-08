@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/minidb"]
+members = ["crates/minidb", "crates/minidb-shared"]
 
 [workspace.package]
 authors = ["DarkCeptor44"]

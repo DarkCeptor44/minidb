@@ -7,3 +7,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = "^1"
+parking_lot = "^0.12"

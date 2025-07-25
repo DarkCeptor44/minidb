@@ -1,0 +1,37 @@
+[package]
+name = "minidb-utils"
+version = "0.1.0"
+description = "Utilities for MiniDB"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+tokio = ["dep:tokio"]
+
+[dependencies]
+anyhow = "^1"
+argon2 = "^0.5"
+bitcode = { version = "^0.6", default-features = false, features = ["serde"] }
+chacha20poly1305 = { version = "^0.10", default-features = false, features = [
+    "getrandom",
+    "std",
+    "rand_core",
+] }
+minidb-shared = { path = "../minidb-shared" }
+rand = "^0.9"
+serde = { version = "^1", default-features = false, features = ["derive"] }
+tempfile = "^3"
+tokio = { version = "^1", features = ["fs", "io-util"], optional = true }
+
+[dev-dependencies]
+divan = "^0.1"
+tokio = { version = "^1", features = ["macros", "rt"] }
+
+[package.metadata.docs.rs]
+all-features = true
+
+[package.metadata.playground]
+features = ["tokio"]

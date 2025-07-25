@@ -30,6 +30,10 @@ tokio = { version = "^1", features = ["fs", "io-util"], optional = true }
 divan = "^0.1"
 tokio = { version = "^1", features = ["macros", "rt"] }
 
+[[bench]]
+name = "utils"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 

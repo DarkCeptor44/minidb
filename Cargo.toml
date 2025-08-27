@@ -6,4 +6,8 @@ members = ["minidb", "minidb-shared", "minidb-utils"]
 authors = ["DarkCeptor44"]
 edition = "2021"
 license = "lgpl-3.0-or-later"
-repository = "https://github.com/DarkCeptor44/minidb.git"
+homepage = "https://github.com/DarkCeptor44/minidb"
+repository = "https://github.com/DarkCeptor44/minidb"
+
+[workspace.dependencies]
+anyhow = "^1"

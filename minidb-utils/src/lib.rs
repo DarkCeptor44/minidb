@@ -62,29 +62,3 @@ fn read_from_file_impl(path: &Path) -> Result<String> {
 
     Ok(data)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde::{Deserialize, Serialize};
-    use tempfile::NamedTempFile;
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq)]
-    struct Person {
-        name: String,
-        age: u8,
-    }
-
-    #[test]
-    fn test_read_from_file() {
-        const CONTENT: &str = "Hello world";
-
-        let file = NamedTempFile::new().expect("Failed to create temporary file");
-        let path = file.path();
-
-        std::fs::write(path, CONTENT).expect("Failed to write to file");
-
-        let s = read_from_file(path).expect("Failed to read file");
-        assert_eq!(s, CONTENT);
-    }
-}

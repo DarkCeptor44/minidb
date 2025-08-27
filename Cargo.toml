@@ -7,23 +7,3 @@ authors = ["DarkCeptor44"]
 edition = "2021"
 license = "lgpl-3.0-or-later"
 repository = "https://github.com/DarkCeptor44/minidb.git"
-
-[profile.dev]
-codegen-units = 16
-debug = true
-incremental = true
-
-[profile.test]
-debug = true
-codegen-units = 16
-incremental = true
-
-[profile.release]
-lto = true
-codegen-units = 1
-opt-level = 3
-strip = true
-
-[profile.fast]
-inherits = "release"
-lto = false

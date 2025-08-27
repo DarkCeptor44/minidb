@@ -48,10 +48,10 @@ pub fn read_from_file<P>(path: P) -> Result<String>
 where
     P: AsRef<Path>,
 {
-    read_from_file_inner(path.as_ref())
+    read_from_file_impl(path.as_ref())
 }
 
-fn read_from_file_inner(path: &Path) -> Result<String> {
+fn read_from_file_impl(path: &Path) -> Result<String> {
     let file = File::open(path).context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
     let mut reader = BufReader::new(file);
     let mut data = String::new();

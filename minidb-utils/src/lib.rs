@@ -1,4 +1,26 @@
 //! # Utilities for minidb
+//!
+//! Useful functions
+//!
+//! ## Functions
+//!
+//! **Note:** `async` functions are only available with the `tokio` feature
+//!
+//! ### File related
+//!
+//! * [`read_from_file`] - Read a file into a string using a buffer
+//! * [`read_from_file_async`] - Read a file asynchronously into a string using a buffer
+//!
+//! ## Benchmarks
+//!
+//! ### File related
+//!
+//! ```text
+//! Timer precision: 100 ns
+//! fs                       fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ├─ read_from_file        655.3 µs      │ 1.131 ms      │ 739.4 µs      │ 767.9 µs      │ 100     │ 100
+//! ╰─ read_from_file_async  686.7 µs      │ 1.243 ms      │ 753.3 µs      │ 788.3 µs      │ 100     │ 100
+//! ```
 
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]

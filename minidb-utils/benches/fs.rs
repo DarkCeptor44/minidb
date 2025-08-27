@@ -11,15 +11,13 @@
 
 use divan::{black_box, Bencher};
 use minidb_utils as utils;
-use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
+use tokio::runtime::Runtime;
 
 const N: u64 = 1024;
 
-#[derive(Serialize, Deserialize)]
-struct Person {
-    name: String,
-    age: u8,
+fn main() {
+    divan::main();
 }
 
 #[divan::bench]
@@ -29,13 +27,34 @@ fn read_from_file(b: Bencher) {
         let file = NamedTempFile::new().expect("Failed to create temporary file");
         let path = file.path().to_path_buf();
 
-        std::fs::write(&path, &content).expect("Failed to write to file");
+        std::fs::write(&path, content).expect("Failed to write to file");
 
         (file, path)
     })
     .bench_values(|(_file, path)| {
-        let s = utils::read_from_file(path).expect("Failed to read file");
+        let s = utils::read_from_file(black_box(path)).expect("Failed to read file");
         black_box(s);
+    });
+}
+
+#[divan::bench]
+fn read_from_file_async(b: Bencher) {
+    let rt = Runtime::new().expect("Failed to create runtime");
+
+    b.with_inputs(|| {
+        let content = padding(N);
+        let file = NamedTempFile::new().expect("Failed to create temporary file");
+        let path = file.path().to_path_buf();
+
+        std::fs::write(&path, content).expect("Failed to write to file");
+
+        (file, path)
+    })
+    .bench_values(|(_file, path)| {
+        let s = rt
+            .block_on(utils::read_from_file_async(black_box(path)))
+            .expect("Failed to read file");
+        black_box(s)
     });
 }
 

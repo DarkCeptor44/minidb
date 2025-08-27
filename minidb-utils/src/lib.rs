@@ -42,7 +42,7 @@ use minidb_shared::MiniDBError;
 /// ```rust,no_run
 /// use minidb_utils::read_from_file;
 ///
-/// let str = read_from_file("file.txt").expect("Failed to read file");
+/// let str = read_from_file("file.txt").unwrap();
 /// ```
 pub fn read_from_file<P>(path: P) -> Result<String>
 where
@@ -58,6 +58,53 @@ fn read_from_file_impl(path: &Path) -> Result<String> {
 
     reader
         .read_to_string(&mut data)
+        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+
+    Ok(data)
+}
+
+/// Read a file asynchronously into a string using a buffer
+///
+/// ## Arguments
+///
+/// * `path` - The path to the file to read
+///
+/// ## Returns
+///
+/// A string containing the contents of the file
+///
+/// ## Errors
+///
+/// Returns an error if the path does not exist, failed to open or failed to be read
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use minidb_utils::read_from_file_async;
+///
+/// let str = read_from_file_async("file.txt").await.unwrap();
+/// ```
+#[cfg(feature = "tokio")]
+pub async fn read_from_file_async<P>(path: P) -> Result<String>
+where
+    P: AsRef<Path>,
+{
+    read_from_file_async_impl(path.as_ref()).await
+}
+
+#[cfg(feature = "tokio")]
+async fn read_from_file_async_impl(path: &Path) -> Result<String> {
+    use tokio::io::AsyncReadExt;
+
+    let file = tokio::fs::File::open(path)
+        .await
+        .context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+    let mut reader = tokio::io::BufReader::new(file);
+    let mut data = String::new();
+
+    reader
+        .read_to_string(&mut data)
+        .await
         .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
 
     Ok(data)

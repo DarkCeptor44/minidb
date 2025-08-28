@@ -104,6 +104,27 @@ fn serialize_file(b: Bencher) {
     });
 }
 
+#[divan::bench]
+fn serialize_file_async(b: Bencher) {
+    let rt = Runtime::new().expect("Failed to create runtime");
+
+    b.with_inputs(|| {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let path = temp_dir.path().join("test");
+        let p = Person {
+            name: "John Doe".to_string(),
+            age: 31,
+        };
+
+        (temp_dir, path, p)
+    })
+    .bench_values(|(_temp_dir, path, p)| {
+        rt.block_on(utils::serialize_file_async(black_box(path), black_box(&p)))
+            .expect("Failed to serialize file");
+        black_box(());
+    });
+}
+
 /// Returns a vector of bytes that is `bytes` long
 fn padding(bytes: u64) -> Vec<u8> {
     const CONTENT: &str = "content8adsaasdadasdadlklaklskdklaslkd";

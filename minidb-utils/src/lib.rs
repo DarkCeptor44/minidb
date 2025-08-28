@@ -226,7 +226,7 @@ async fn read_from_file_async_impl(path: &Path) -> Result<String> {
 ///     age: 31,
 /// };
 ///
-/// serialize_file("person.bin", &p).expect("Failed to serialize to bitcode");
+/// serialize_file("person.bin", &p).unwrap();
 /// ```
 pub fn serialize_file<P, T>(path: P, value: &T) -> Result<()>
 where
@@ -257,6 +257,89 @@ where
     let temp_file = writer
         .into_inner()
         .context(MiniDBError::FailedToGetInnerWriter)?;
+    temp_file
+        .persist(path)
+        .context(MiniDBError::FailedToPersistTempFile {
+            temp: temp_path,
+            orig: path.to_path_buf(),
+        })?;
+
+    Ok(())
+}
+
+/// Serialize a value to a file asynchronously using [bitcode]
+///
+/// ## Arguments
+///
+/// * `path` - The path to the file to serialize to
+/// * `value` - The value to serialize
+///
+/// ## Errors
+///
+/// Returns an error if:
+///
+/// * Failed to create temporary file
+/// * Failed to reopen temporary file
+/// * Failed to serialize value
+/// * Failed to write or flush temporary file
+/// * Failed to get temporary file from writer
+/// * Failed to persist temporary file
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use minidb_utils::serialize_file_async;
+/// use serde::Serialize;
+///
+/// #[derive(Serialize)]
+/// struct Person {
+///     name: String,
+///     age: u8,
+/// }
+///
+/// let p = Person {
+///     name: String::from("John Doe"),
+///     age: 31,
+/// };
+///
+/// serialize_file_async("person.bin", &p).await.unwrap();
+/// ```
+#[cfg(feature = "tokio")]
+pub async fn serialize_file_async<P, T>(path: P, value: &T) -> Result<()>
+where
+    P: AsRef<Path>,
+    T: Serialize,
+{
+    serialize_file_async_impl(path.as_ref(), value).await
+}
+
+#[cfg(feature = "tokio")]
+async fn serialize_file_async_impl<T>(path: &Path, value: &T) -> Result<()>
+where
+    T: Serialize,
+{
+    use tokio::io::AsyncWriteExt;
+
+    let temp_file = NamedTempFile::new_in(path.parent().unwrap_or(Path::new(".")))
+        .context(MiniDBError::FailedToCreateTempFile)?;
+    let temp_path = temp_file.path().to_path_buf();
+    let mut temp_file_async = tokio::fs::File::from_std(
+        temp_file
+            .reopen()
+            .context(MiniDBError::FailedToReopenTempFile(temp_path.clone()))?,
+    );
+    let mut writer = tokio::io::BufWriter::new(&mut temp_file_async);
+    let data = bitcode::serialize(value).context(MiniDBError::FailedToSerializeValue)?;
+
+    writer
+        .write_all(&data)
+        .await
+        .context(MiniDBError::FailedToWriteTempFile(temp_path.clone()))?;
+    writer
+        .flush()
+        .await
+        .context(MiniDBError::FailedToFlushTempFile(temp_path.clone()))?;
+
     temp_file
         .persist(path)
         .context(MiniDBError::FailedToPersistTempFile {

@@ -72,3 +72,26 @@ fn test_serialize_file() {
     let s = read_from_file(&path).expect("Failed to read file");
     assert_eq!(s, "\u{8}John Doe\u{1f}");
 }
+
+#[tokio::test]
+#[cfg(feature = "tokio")]
+async fn test_serialize_file_async() {
+    use minidb_utils::{read_from_file_async, serialize_file_async};
+
+    let temp_dir = tempdir().expect("Failed to create temporary directory");
+    let path = temp_dir.path().join("test");
+    let p = Person {
+        name: "John Doe".to_string(),
+        age: 31,
+    };
+
+    serialize_file_async(&path, &p)
+        .await
+        .expect("Failed to serialize file");
+    assert!(path.is_file());
+
+    let s = read_from_file_async(&path)
+        .await
+        .expect("Failed to read file");
+    assert_eq!(s, "\u{8}John Doe\u{1f}");
+}

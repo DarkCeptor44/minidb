@@ -13,6 +13,8 @@ use divan::{black_box, Bencher};
 use minidb_utils as utils;
 use serde::{Deserialize, Serialize};
 use tempfile::{tempdir, NamedTempFile};
+
+#[cfg(feature = "tokio")]
 use tokio::runtime::Runtime;
 
 const N: u64 = 1024;

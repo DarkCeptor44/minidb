@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error, Result};
 use argon2::{
     password_hash::{Salt as Argon2Salt, SaltString},
     Argon2, Params, ParamsBuilder, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -50,4 +50,30 @@ impl TryInto<Params> for Argon2Params {
             .build()
             .map_err(|e| anyhow!("Failed to build Argon2 parameters: {e}"))
     }
+}
+
+/// Generate a random salt
+///
+/// ## Returns
+///
+/// A 16 byte salt
+///
+/// ## Errors
+///
+/// Returns an error if failed to generate salt, refer to [`rand::rngs::OsRng::try_fill_bytes`] for why it might fail
+///
+/// ## Example
+///
+/// ```rust
+/// use minidb_utils::generate_salt;
+///
+/// let salt = generate_salt().unwrap();
+/// ```
+pub fn generate_salt() -> Result<[u8; 16]> {
+    let mut rng = rand::rngs::OsRng;
+    let mut salt = [0u8; 16];
+
+    rng.try_fill_bytes(&mut salt)
+        .context("Failed to generate salt")?;
+    Ok(salt)
 }

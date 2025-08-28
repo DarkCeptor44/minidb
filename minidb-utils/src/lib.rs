@@ -8,8 +8,12 @@
 //!
 //! ### File related
 //!
+//! * [`deserialize_file`] - Deserialize [bitcode] data from a file
+//! * [`deserialize_file_async`] - Deserialize [bitcode] data from a file asynchronously
 //! * [`read_from_file`] - Read a file into a string using a buffer
 //! * [`read_from_file_async`] - Read a file asynchronously into a string using a buffer
+//! * [`serialize_file`] - Serialize [bitcode] data to a file
+//! * [`serialize_file_async`] - Serialize [bitcode] data to a file asynchronously
 //!
 //! ## Benchmarks
 //!
@@ -17,9 +21,13 @@
 //!
 //! ```text
 //! Timer precision: 100 ns
-//! fs                       fastest       │ slowest       │ median        │ mean          │ samples │ iters
-//! ├─ read_from_file        655.3 µs      │ 1.131 ms      │ 739.4 µs      │ 767.9 µs      │ 100     │ 100
-//! ╰─ read_from_file_async  686.7 µs      │ 1.243 ms      │ 753.3 µs      │ 788.3 µs      │ 100     │ 100
+//! fs                         fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ├─ deserialize_file        734.7 µs      │ 1.499 ms      │ 952.7 µs      │ 967.7 µs      │ 100     │ 100
+//! ├─ deserialize_file_async  758.7 µs      │ 1.702 ms      │ 972.3 µs      │ 1.005 ms      │ 100     │ 100
+//! ├─ read_from_file          654.4 µs      │ 1.347 ms      │ 791 µs        │ 834.5 µs      │ 100     │ 100
+//! ├─ read_from_file_async    706.8 µs      │ 1.844 ms      │ 831.9 µs      │ 882.3 µs      │ 100     │ 100
+//! ├─ serialize_file          723.1 µs      │ 1.108 ms      │ 779.8 µs      │ 803.1 µs      │ 100     │ 100
+//! ╰─ serialize_file_async    783 µs        │ 1.267 ms      │ 885.4 µs      │ 912.9 µs      │ 100     │ 100
 //! ```
 
 #![forbid(unsafe_code)]

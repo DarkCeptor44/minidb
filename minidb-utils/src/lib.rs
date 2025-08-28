@@ -60,6 +60,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
+mod crypto;
 mod pathext;
 
 use std::{
@@ -68,6 +69,7 @@ use std::{
     path::Path,
 };
 
+pub use crypto::Argon2Params;
 pub use pathext::PathExt;
 
 use anyhow::{Context, Result};

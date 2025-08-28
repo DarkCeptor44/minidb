@@ -24,6 +24,29 @@ fn test_deserialize_file() {
     assert_eq!(p2, p);
 }
 
+#[tokio::test]
+#[cfg(feature = "tokio")]
+async fn test_deserialize_file_async() {
+    use minidb_utils::{deserialize_file_async, serialize_file_async};
+
+    let temp_dir = tempdir().expect("Failed to create temporary directory");
+    let path = temp_dir.path().join("test");
+    let p = Person {
+        name: "John Doe".to_string(),
+        age: 31,
+    };
+
+    serialize_file_async(&path, &p)
+        .await
+        .expect("Failed to serialize file");
+    assert!(path.is_file());
+
+    let p2: Person = deserialize_file_async(&path)
+        .await
+        .expect("Failed to deserialize file");
+    assert_eq!(p2, p);
+}
+
 #[test]
 fn test_read_from_file() {
     const CONTENT: &str = "Hello world";

@@ -105,6 +105,71 @@ where
     Ok(value)
 }
 
+/// Deserialize [bitcode] data from a file asynchronously
+///
+/// ## Arguments
+///
+/// * `path` - The path to the file to deserialize from
+///
+/// ## Returns
+///
+/// The deserialized value
+///
+/// ## Errors
+///
+/// Returns an error if:
+///
+/// * Path does not exist
+/// * Failed to open file
+/// * Failed to read file
+/// * Failed to deserialize
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use minidb_utils::deserialize_file_async;
+/// use serde::Deserialize;
+///
+/// #[derive(Deserialize)]
+/// struct Person {
+///     name: String,
+///     age: u8
+/// }
+///
+/// let p: Person = deserialize_file_async("person.bin").await.unwrap();
+/// ```
+#[cfg(feature = "tokio")]
+pub async fn deserialize_file_async<P, T>(path: P) -> Result<T>
+where
+    P: AsRef<Path>,
+    T: for<'de> Deserialize<'de>,
+{
+    deserialize_file_async_impl(path.as_ref()).await
+}
+
+#[cfg(feature = "tokio")]
+async fn deserialize_file_async_impl<T>(path: &Path) -> Result<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    use tokio::io::AsyncReadExt;
+
+    let file = tokio::fs::File::open(path)
+        .await
+        .context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+    let mut reader = tokio::io::BufReader::new(file);
+    let mut data = Vec::new();
+
+    reader
+        .read_to_end(&mut data)
+        .await
+        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+
+    let value: T =
+        bitcode::deserialize(&data).context(MiniDBError::FailedToDeserializeData(data))?;
+    Ok(value)
+}
+
 /// Read a file into a string using a buffer
 ///
 /// ## Arguments

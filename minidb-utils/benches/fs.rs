@@ -49,6 +49,30 @@ fn deserialize_file(b: Bencher) {
 }
 
 #[divan::bench]
+fn deserialize_file_async(b: Bencher) {
+    let rt = Runtime::new().expect("Failed to create runtime");
+
+    b.with_inputs(|| {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let path = temp_dir.path().join("test");
+        let p = Person {
+            name: "John Doe".to_string(),
+            age: 31,
+        };
+
+        utils::serialize_file(&path, &p).expect("Failed to serialize file");
+
+        (temp_dir, path)
+    })
+    .bench_values(|(_temp_dir, path)| {
+        let p2: Person = rt
+            .block_on(utils::deserialize_file_async(black_box(path)))
+            .expect("Failed to deserialize file");
+        black_box(p2);
+    });
+}
+
+#[divan::bench]
 fn read_from_file(b: Bencher) {
     b.with_inputs(|| {
         let content = padding(N);

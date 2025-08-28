@@ -1,5 +1,28 @@
-use minidb_utils::read_from_file;
-use tempfile::NamedTempFile;
+use minidb_utils::{deserialize_file, read_from_file, serialize_file};
+use serde::{Deserialize, Serialize};
+use tempfile::{tempdir, NamedTempFile};
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+struct Person {
+    name: String,
+    age: u8,
+}
+
+#[test]
+fn test_deserialize_file() {
+    let temp_dir = tempdir().expect("Failed to create temporary directory");
+    let path = temp_dir.path().join("test");
+    let p = Person {
+        name: "John Doe".to_string(),
+        age: 31,
+    };
+
+    serialize_file(&path, &p).expect("Failed to serialize file");
+    assert!(path.is_file());
+
+    let p2: Person = deserialize_file(path).expect("Failed to deserialize file");
+    assert_eq!(p2, p);
+}
 
 #[test]
 fn test_read_from_file() {
@@ -32,4 +55,20 @@ async fn test_read_from_file_async() {
         .await
         .expect("Failed to read file");
     assert_eq!(s, CONTENT);
+}
+
+#[test]
+fn test_serialize_file() {
+    let temp_dir = tempdir().expect("Failed to create temporary directory");
+    let path = temp_dir.path().join("test");
+    let p = Person {
+        name: "John Doe".to_string(),
+        age: 31,
+    };
+
+    serialize_file(&path, &p).expect("Failed to serialize file");
+    assert!(path.is_file());
+
+    let s = read_from_file(&path).expect("Failed to read file");
+    assert_eq!(s, "\u{8}John Doe\u{1f}");
 }

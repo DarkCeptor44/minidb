@@ -11,13 +11,41 @@
 
 use divan::{black_box, Bencher};
 use minidb_utils as utils;
-use tempfile::NamedTempFile;
+use serde::{Deserialize, Serialize};
+use tempfile::{tempdir, NamedTempFile};
 use tokio::runtime::Runtime;
 
 const N: u64 = 1024;
 
+#[derive(Serialize, Deserialize)]
+struct Person {
+    name: String,
+    age: u8,
+}
+
 fn main() {
     divan::main();
+}
+
+#[divan::bench]
+fn deserialize_file(b: Bencher) {
+    b.with_inputs(|| {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let path = temp_dir.path().join("test");
+        let p = Person {
+            name: "John Doe".to_string(),
+            age: 31,
+        };
+
+        utils::serialize_file(&path, &p).expect("Failed to serialize file");
+
+        (temp_dir, path)
+    })
+    .bench_values(|(_temp_dir, path)| {
+        let p2: Person =
+            utils::deserialize_file(black_box(path)).expect("Failed to deserialize file");
+        black_box(p2);
+    });
 }
 
 #[divan::bench]
@@ -58,6 +86,25 @@ fn read_from_file_async(b: Bencher) {
     });
 }
 
+#[divan::bench]
+fn serialize_file(b: Bencher) {
+    b.with_inputs(|| {
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
+        let path = temp_dir.path().join("test");
+        let p = Person {
+            name: "John Doe".to_string(),
+            age: 31,
+        };
+
+        (temp_dir, path, p)
+    })
+    .bench_values(|(_temp_dir, path, p)| {
+        utils::serialize_file(black_box(path), black_box(&p)).expect("Failed to serialize file");
+        black_box(());
+    });
+}
+
+/// Returns a vector of bytes that is `bytes` long
 fn padding(bytes: u64) -> Vec<u8> {
     const CONTENT: &str = "content8adsaasdadasdadlklaklskdklaslkd";
 

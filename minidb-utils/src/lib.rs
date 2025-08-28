@@ -38,12 +38,72 @@
 
 use std::{
     fs::File,
-    io::{BufReader, Read},
+    io::{BufReader, BufWriter, Read, Write},
     path::Path,
 };
 
 use anyhow::{Context, Result};
 use minidb_shared::MiniDBError;
+use serde::{Deserialize, Serialize};
+use tempfile::NamedTempFile;
+
+/// Deserialize [bitcode] data from a file
+///
+/// ## Arguments
+///
+/// * `path` - The path to the file to deserialize from
+///
+/// ## Returns
+///
+/// The deserialized data
+///
+/// ## Errors
+///
+/// Returns an error if:
+///
+/// * Path does not exist
+/// * Failed to open file
+/// * Failed to read file
+/// * Failed to deserialize
+///
+/// ## Example
+///
+/// ```rust,no_run
+/// use minidb_utils::deserialize_file;
+/// use serde::Deserialize;
+///
+/// #[derive(Deserialize)]
+/// struct Person {
+///     name: String,
+///     age: u8,
+/// }
+///
+/// let p: Person = deserialize_file("person.bin").unwrap();
+/// ```
+pub fn deserialize_file<P, T>(path: P) -> Result<T>
+where
+    P: AsRef<Path>,
+    T: for<'de> Deserialize<'de>,
+{
+    deserialize_file_impl(path.as_ref())
+}
+
+fn deserialize_file_impl<T>(path: &Path) -> Result<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    let file = File::open(path).context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+    let mut reader = BufReader::new(file);
+    let mut data = Vec::new();
+
+    reader
+        .read_to_end(&mut data)
+        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+
+    let value: T =
+        bitcode::deserialize(&data).context(MiniDBError::FailedToDeserializeData(data))?;
+    Ok(value)
+}
 
 /// Read a file into a string using a buffer
 ///
@@ -130,4 +190,79 @@ async fn read_from_file_async_impl(path: &Path) -> Result<String> {
         .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
 
     Ok(data)
+}
+
+/// Serialize a value to a file using [bitcode]
+///
+/// ## Arguments
+///
+/// * `path` - The path to the file to serialize to
+/// * `value` - The value to serialize
+///
+/// ## Errors
+///
+/// Returns an error if:
+///
+/// * Failed to create temporary file
+/// * Failed to serialize value
+/// * Failed to write or flush temporary file
+/// * Failed to get temporary file from writer
+/// * Failed to persist temporary file
+///
+/// ## Example
+///
+/// ```rust,no_run
+/// use minidb_utils::serialize_file;
+/// use serde::Serialize;
+///
+/// #[derive(Serialize)]
+/// struct Person {
+///     name: String,
+///     age: u8,
+/// }
+///
+/// let p = Person {
+///     name: String::from("John Doe"),
+///     age: 31,
+/// };
+///
+/// serialize_file("person.bin", &p).expect("Failed to serialize to bitcode");
+/// ```
+pub fn serialize_file<P, T>(path: P, value: &T) -> Result<()>
+where
+    P: AsRef<Path>,
+    T: Serialize,
+{
+    serialize_file_impl(path.as_ref(), value)
+}
+
+fn serialize_file_impl<T>(path: &Path, value: &T) -> Result<()>
+where
+    T: Serialize,
+{
+    let temp_file = NamedTempFile::new_in(path.parent().unwrap_or(Path::new(".")))
+        .context(MiniDBError::FailedToCreateTempFile)?;
+    let temp_path = temp_file.path().to_path_buf();
+
+    let mut writer = BufWriter::new(temp_file);
+    let data = bitcode::serialize(value).context(MiniDBError::FailedToSerializeValue)?;
+
+    writer
+        .write_all(&data)
+        .context(MiniDBError::FailedToWriteTempFile(temp_path.clone()))?;
+    writer
+        .flush()
+        .context(MiniDBError::FailedToFlushTempFile(temp_path.clone()))?;
+
+    let temp_file = writer
+        .into_inner()
+        .context(MiniDBError::FailedToGetInnerWriter)?;
+    temp_file
+        .persist(path)
+        .context(MiniDBError::FailedToPersistTempFile {
+            temp: temp_path,
+            orig: path.to_path_buf(),
+        })?;
+
+    Ok(())
 }

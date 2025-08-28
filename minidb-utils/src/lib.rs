@@ -2,18 +2,26 @@
 //!
 //! Useful functions
 //!
+//! ## Traits
+//!
+//! * [`PathExt`]: Extension trait for any type that implements [`AsRef<Path>`] that adds some useful functions
+//!
 //! ## Functions
 //!
 //! **Note:** `async` functions are only available with the `tokio` feature
 //!
 //! ### File related
 //!
-//! * [`deserialize_file`] - Deserialize [bitcode] data from a file
-//! * [`deserialize_file_async`] - Deserialize [bitcode] data from a file asynchronously
-//! * [`read_from_file`] - Read a file into a string using a buffer
-//! * [`read_from_file_async`] - Read a file asynchronously into a string using a buffer
-//! * [`serialize_file`] - Serialize [bitcode] data to a file
-//! * [`serialize_file_async`] - Serialize [bitcode] data to a file asynchronously
+//! * [`deserialize_file`]: Deserialize [bitcode] data from a file
+//! * [`deserialize_file_async`]: Deserialize [bitcode] data from a file asynchronously
+//! * [`read_from_file`]: Read a file into a string using a buffer
+//! * [`read_from_file_async`]: Read a file asynchronously into a string using a buffer
+//! * [`serialize_file`]: Serialize [bitcode] data to a file
+//! * [`serialize_file_async`]: Serialize [bitcode] data to a file asynchronously
+//!
+//! ### Path related
+//!
+//! * [`PathExt::is_empty`]: Check if a path is a directory and empty
 //!
 //! ## Benchmarks
 //!
@@ -28,6 +36,14 @@
 //! ├─ read_from_file_async    706.8 µs      │ 1.844 ms      │ 831.9 µs      │ 882.3 µs      │ 100     │ 100
 //! ├─ serialize_file          723.1 µs      │ 1.108 ms      │ 779.8 µs      │ 803.1 µs      │ 100     │ 100
 //! ╰─ serialize_file_async    783 µs        │ 1.267 ms      │ 885.4 µs      │ 912.9 µs      │ 100     │ 100
+//! ```
+//!
+//! ### Path related
+//!
+//! ```text
+//! Timer precision: 100 ns
+//! path         fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ╰─ is_empty  222.6 µs      │ 325.1 µs      │ 231.9 µs      │ 240.6 µs      │ 100     │ 100
 //! ```
 
 #![forbid(unsafe_code)]
@@ -44,11 +60,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
+mod pathext;
+
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
     path::Path,
 };
+
+pub use pathext::PathExt;
 
 use anyhow::{Context, Result};
 use minidb_shared::MiniDBError;

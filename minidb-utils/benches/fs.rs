@@ -49,6 +49,7 @@ fn deserialize_file(b: Bencher) {
 }
 
 #[divan::bench]
+#[cfg(feature = "tokio")]
 fn deserialize_file_async(b: Bencher) {
     let rt = Runtime::new().expect("Failed to create runtime");
 
@@ -90,6 +91,7 @@ fn read_from_file(b: Bencher) {
 }
 
 #[divan::bench]
+#[cfg(feature = "tokio")]
 fn read_from_file_async(b: Bencher) {
     let rt = Runtime::new().expect("Failed to create runtime");
 
@@ -129,6 +131,7 @@ fn serialize_file(b: Bencher) {
 }
 
 #[divan::bench]
+#[cfg(feature = "tokio")]
 fn serialize_file_async(b: Bencher) {
     let rt = Runtime::new().expect("Failed to create runtime");
 

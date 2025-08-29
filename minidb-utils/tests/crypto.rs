@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use argon2::Params;
-use minidb_utils::{generate_salt, Argon2Params};
+use argon2::{Algorithm, Argon2, Params, Version};
+use minidb_utils::{derive_key, generate_salt, Argon2Params};
 
 #[test]
 fn test_argon2params() {
@@ -21,6 +21,31 @@ fn test_argon2params() {
     assert_eq!(params.t_cost(), my_params.iterations);
     assert_eq!(params.p_cost(), my_params.parallelism);
     assert_eq!(params.output_len(), my_params.output_len);
+}
+
+#[test]
+fn test_derive_key_simple() {
+    let key = derive_key(None, "password", "somesalt").expect("Failed to derive key");
+    assert_eq!(dbg!(key).len(), 32);
+}
+
+#[test]
+fn test_derive_key_complex() {
+    let params = Argon2Params {
+        iterations: 1,
+        memory: 1024,
+        parallelism: 1,
+        output_len: Some(24),
+    };
+    let ctx = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        params
+            .try_into()
+            .expect("Failed to convert Argon2Params to argon2::Params"),
+    );
+    let key = derive_key(ctx, "password", "somesalt").expect("Failed to derive key");
+    assert_eq!(dbg!(key).len(), 24);
 }
 
 #[test]

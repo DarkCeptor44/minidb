@@ -47,6 +47,7 @@ impl<T> IntoOptional<T> for Option<T> {
 /// use minidb_utils::derive_key;
 ///
 /// let key = derive_key(None, "password", "somesalt").unwrap();
+/// println!("Key: {:?}", key);
 /// ```
 ///
 /// Derive a key with custom parameters
@@ -57,6 +58,7 @@ impl<T> IntoOptional<T> for Option<T> {
 ///
 /// let ctx = Argon2::new(Algorithm::Argon2id, Version::V0x13, Params::new(1024, 1, 1, Some(24)).unwrap());
 /// let key = derive_key(ctx, "password", "somesalt").unwrap();
+/// println!("Key: {:?}", key);
 /// ```
 pub fn derive_key<'a, Ctx, Pass, Salt>(ctx: Ctx, pass: Pass, salt: Salt) -> Result<Vec<u8>>
 where

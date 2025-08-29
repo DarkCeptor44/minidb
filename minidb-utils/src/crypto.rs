@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Context, Result};
 use argon2::{
     password_hash::{Salt as Argon2Salt, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -167,4 +167,48 @@ fn hash_password_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<S
         .hash_password(pass, salt)
         .map_err(|e| anyhow!("Failed to hash password: {e}"))?;
     Ok(hash.to_string())
+}
+
+/// Verify a password using [Argon2id](argon2)
+///
+/// ## Arguments
+///
+/// * `pass` - The password to verify
+/// * `hash` - The PHC string representing the hashed password
+///
+/// ## Returns
+///
+/// `true` if the password is correct, `false` otherwise
+///
+/// ## Errors
+///
+/// Returns an error if the password verification fails, refer to [`PasswordVerifier::verify_password`] for why it might fail
+///
+/// ## Example
+///
+/// ```rust
+/// use minidb_utils::{hash_password, verify_password};
+///
+/// let password = "password";
+/// let hash = hash_password(None, password, "somesalt").unwrap();
+///
+/// if verify_password(password, hash).unwrap() {
+///     println!("Password is correct");
+/// } else {
+///     println!("Password is incorrect");
+/// }
+/// ```
+pub fn verify_password<Pass, Hash>(pass: Pass, hash: Hash) -> Result<bool>
+where
+    Pass: AsRef<[u8]>,
+    Hash: AsRef<str>,
+{
+    verify_password_impl(pass.as_ref(), hash.as_ref())
+}
+
+fn verify_password_impl(pass: &[u8], hash: &str) -> Result<bool> {
+    let parsed_hash =
+        PasswordHash::new(hash).map_err(|e| anyhow!("Failed to parse PHC string: {e}"))?;
+    let ctx = Argon2::default();
+    Ok(ctx.verify_password(pass, &parsed_hash).is_ok())
 }

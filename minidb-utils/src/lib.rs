@@ -69,7 +69,7 @@ use std::{
     path::Path,
 };
 
-pub use crypto::{derive_key, generate_salt, hash_password, IntoOptional};
+pub use crypto::{derive_key, generate_salt, hash_password, verify_password, IntoOptional};
 pub use pathext::PathExt;
 
 use anyhow::{Context, Result};

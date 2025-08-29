@@ -1,27 +1,10 @@
+use crate::IntoOptional;
 use anyhow::{anyhow, Context, Result};
 use argon2::{
     password_hash::{Salt as Argon2Salt, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use rand::TryRngCore;
-
-/// Extension trait for [`Option<T>`]
-pub trait IntoOptional<T> {
-    /// Convert T to [`Option<T>`]
-    fn into_optional(self) -> Option<T>;
-}
-
-impl<T> IntoOptional<T> for T {
-    fn into_optional(self) -> Option<T> {
-        Some(self)
-    }
-}
-
-impl<T> IntoOptional<T> for Option<T> {
-    fn into_optional(self) -> Option<T> {
-        self
-    }
-}
 
 /// Derive a key from a password and a salt using [Argon2id](argon2)
 ///

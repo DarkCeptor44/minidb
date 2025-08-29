@@ -15,11 +15,21 @@
 //!
 //! ## Traits
 //!
+//! * [`IntoOptional`]: Extension trait for [`Option<T>`]
 //! * [`PathExt`]: Extension trait for any type that implements [`AsRef<Path>`] that adds some useful functions
 //!
 //! ## Functions
 //!
 //! **Note:** `async` functions are only available with the `tokio` feature
+//!
+//! * [`IntoOptional::into_optional`]: Convert a value to an [`Option<T>`]
+//!
+//! ### Cryptographic
+//!
+//! * [`derive_key`]: Derive a key from a password and a salt using [Argon2id](argon2)
+//! * [`generate_salt`]: Generate a random salt of 16 bytes
+//! * [`hash_password`]: Hash a password using [Argon2id](argon2)
+//! * [`verify_password`]: Verify a password using [Argon2id](argon2)
 //!
 //! ### File related
 //!
@@ -69,13 +79,31 @@ use std::{
     path::Path,
 };
 
-pub use crypto::{derive_key, generate_salt, hash_password, verify_password, IntoOptional};
+pub use crypto::{derive_key, generate_salt, hash_password, verify_password};
 pub use pathext::PathExt;
 
 use anyhow::{Context, Result};
 use minidb_shared::MiniDBError;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
+
+/// Extension trait for [`Option<T>`]
+pub trait IntoOptional<T> {
+    /// Convert T to [`Option<T>`]
+    fn into_optional(self) -> Option<T>;
+}
+
+impl<T> IntoOptional<T> for T {
+    fn into_optional(self) -> Option<T> {
+        Some(self)
+    }
+}
+
+impl<T> IntoOptional<T> for Option<T> {
+    fn into_optional(self) -> Option<T> {
+        self
+    }
+}
 
 /// Deserialize [bitcode] data from a file
 ///

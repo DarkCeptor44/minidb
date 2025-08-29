@@ -27,7 +27,7 @@ impl<T> IntoOptional<T> for Option<T> {
 ///
 /// ## Arguments
 ///
-/// * `ctx` - The [Argon2] context to use, it contains the parameters used to derive the key like the number of iterations, memory, threads and output length. If not provided, the default parameters will be used
+/// * `ctx` - The [Argon2] struct to use, it contains the parameters used to derive the key like the number of iterations, memory, threads and output length. If not provided, the default parameters will be used
 /// * `pass` - The password to derive the key from
 /// * `salt` - The salt to derive the key with
 ///
@@ -39,13 +39,24 @@ impl<T> IntoOptional<T> for Option<T> {
 ///
 /// Returns an error if the key derivation fails, refer to [`Argon2::hash_password_into`] for why it might fail
 ///
+/// ## Examples
 ///
-/// ## Example
+/// Derive a key with the default parameters
 ///
 /// ```rust
 /// use minidb_utils::derive_key;
 ///
 /// let key = derive_key(None, "password", "somesalt").unwrap();
+/// ```
+///
+/// Derive a key with custom parameters
+///
+/// ```rust
+/// use minidb_utils::derive_key;
+/// use argon2::{Algorithm, Argon2, Params, Version};
+///
+/// let ctx = Argon2::new(Algorithm::Argon2id, Version::V0x13, Params::new(1024, 1, 1, Some(24)).unwrap());
+/// let key = derive_key(ctx, "password", "somesalt").unwrap();
 /// ```
 pub fn derive_key<'a, Ctx, Pass, Salt>(ctx: Ctx, pass: Pass, salt: Salt) -> Result<Vec<u8>>
 where

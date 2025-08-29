@@ -53,8 +53,8 @@ impl<T> IntoOptional<T> for Option<T> {
 /// Derive a key with custom parameters
 ///
 /// ```rust
-/// use minidb_utils::derive_key;
 /// use argon2::{Algorithm, Argon2, Params, Version};
+/// use minidb_utils::derive_key;
 ///
 /// let ctx = Argon2::new(Algorithm::Argon2id, Version::V0x13, Params::new(1024, 1, 1, Some(24)).unwrap());
 /// let key = derive_key(ctx, "password", "somesalt").unwrap();
@@ -105,4 +105,66 @@ pub fn generate_salt() -> Result<[u8; 16]> {
     rng.try_fill_bytes(&mut salt)
         .context("Failed to generate salt")?;
     Ok(salt)
+}
+
+/// Hash a password using [Argon2id](argon2)
+///
+/// ## Arguments
+///
+/// * `ctx` - The [Argon2] struct to use, it contains the parameters used to hash the password like the number of iterations, memory, threads and output length. If not provided, the default parameters will be used
+/// * `pass` - The password to hash
+/// * `salt` - The salt to hash with
+///
+/// ## Returns
+///
+/// A PHC string representing the hashed password
+///
+/// ## Errors
+///
+/// Returns an error if the password hashing fails, refer to [`PasswordHasher::hash_password`] for why it might fail
+///
+/// ## Examples
+///
+/// Hash a password with the default parameters
+///
+/// ```rust
+/// use argon2::PasswordHash;
+/// use minidb_utils::hash_password;
+///
+/// let hash = hash_password(None, "password", "somesalt").unwrap();
+/// println!("Hash: {}", hash); // $argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$PL01amPyeUuxG7H0vIr5X+qHkZvWnHmGBGXFYvh8z2E
+/// ```
+///
+/// Hash a password with custom parameters
+///
+/// ```rust
+/// use argon2::{Algorithm, Argon2, Params, Version};
+/// use minidb_utils::hash_password;
+///
+/// let ctx = Argon2::new(
+///         Algorithm::Argon2id,
+///         Version::V0x13,
+///         Params::new(19 * 1024, 2, 1, Some(32)).unwrap(),
+///     );
+/// let hash = hash_password(ctx, "password", "somesalt").unwrap();
+/// println!("Hash: {}", hash); // $argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$PL01amPyeUuxG7H0vIr5X+qHkZvWnHmGBGXFYvh8z2E
+/// ```
+pub fn hash_password<'a, Ctx, Pass, Salt>(ctx: Ctx, pass: Pass, salt: Salt) -> Result<String>
+where
+    Ctx: IntoOptional<Argon2<'a>>,
+    Pass: AsRef<[u8]>,
+    Salt: AsRef<[u8]>,
+{
+    hash_password_impl(ctx.into_optional(), pass.as_ref(), salt.as_ref())
+}
+
+fn hash_password_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<String> {
+    let ctx = ctx.unwrap_or_default();
+    let salt_string = SaltString::encode_b64(salt)
+        .map_err(|e| anyhow!("Failed to encode salt to Base64: {e}"))?;
+    let salt: Argon2Salt = (&salt_string).into();
+    let hash = ctx
+        .hash_password(pass, salt)
+        .map_err(|e| anyhow!("Failed to hash password: {e}"))?;
+    Ok(hash.to_string())
 }

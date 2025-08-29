@@ -36,3 +36,20 @@ fn test_generate_salt() {
 
     assert_eq!(dbg!(salts).len(), N);
 }
+
+#[test]
+fn test_hash_password_default() {
+    let hash = hash_password(None, "password", "somesalt").expect("Failed to hash password");
+    PasswordHash::new(dbg!(&hash)).expect("Failed to parse password hash");
+}
+
+#[test]
+fn test_hash_password_19m_2t_1p_32() {
+    let ctx = Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(19 * 1024, 2, 1, Some(32)).expect("Failed to create argon2::Params"),
+    );
+    let hash = hash_password(ctx, "password", "somesalt").expect("Failed to hash password");
+    PasswordHash::new(dbg!(&hash)).expect("Failed to parse password hash");
+}

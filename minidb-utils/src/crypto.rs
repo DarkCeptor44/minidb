@@ -1,10 +1,9 @@
 use anyhow::{anyhow, Context, Error, Result};
 use argon2::{
     password_hash::{Salt as Argon2Salt, SaltString},
-    Argon2, Params, ParamsBuilder, PasswordHash, PasswordHasher, PasswordVerifier,
+    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
 };
 use rand::TryRngCore;
-use serde::{Deserialize, Serialize};
 
 /// Extension trait for [`Option<T>`]
 pub trait IntoOptional<T> {
@@ -21,51 +20,6 @@ impl<T> IntoOptional<T> for T {
 impl<T> IntoOptional<T> for Option<T> {
     fn into_optional(self) -> Option<T> {
         self
-    }
-}
-
-/// [Argon2] parameters wrapper
-///
-/// ## Example
-///
-/// ```rust
-/// use minidb_utils::Argon2Params;
-/// use argon2::Params;
-///
-/// let my_params = Argon2Params {
-///     iterations: 1,
-///     memory: 1024,
-///     parallelism: 1,
-///     output_len: Some(32),
-/// };
-///
-/// let params: Params = my_params.try_into().unwrap();
-/// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Argon2Params {
-    /// Memory cost in KiB, between 8 * [`threads`](Self::parallelism) and `(2^32)-1`
-    pub memory: u32,
-
-    /// Number of iterations, also known as `t_cost`, between 1 and `(2^32)-1`
-    pub iterations: u32,
-
-    /// Number of threads, also known as `p_cost` or `threads`, between 1 and `(2^24)-1`
-    pub parallelism: u32,
-
-    /// Length of the output (default: 32 bytes)
-    pub output_len: Option<usize>,
-}
-
-impl TryFrom<Argon2Params> for Params {
-    type Error = argon2::Error;
-
-    fn try_from(value: Argon2Params) -> std::result::Result<Self, Self::Error> {
-        Self::new(
-            value.memory,
-            value.iterations,
-            value.parallelism,
-            value.output_len,
-        )
     }
 }
 

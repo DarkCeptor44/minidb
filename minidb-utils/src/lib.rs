@@ -97,6 +97,7 @@
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]
 
 mod crypto;
+mod errors;
 mod pathext;
 
 use std::{
@@ -106,10 +107,10 @@ use std::{
 };
 
 pub use crypto::{derive_key, generate_salt, hash_password, verify_password};
+pub use errors::*;
 pub use pathext::PathExt;
 
 use anyhow::{Context, Result};
-use minidb_shared::MiniDBError;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
@@ -176,16 +177,16 @@ fn deserialize_file_impl<T>(path: &Path) -> Result<T>
 where
     T: for<'de> Deserialize<'de>,
 {
-    let file = File::open(path).context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+    let file = File::open(path).context(UtilsError::FailedToOpenFile(path.to_path_buf()))?;
     let mut reader = BufReader::new(file);
     let mut data = Vec::new();
 
     reader
         .read_to_end(&mut data)
-        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToReadFile(path.to_path_buf()))?;
 
     let value: T =
-        bitcode::deserialize(&data).context(MiniDBError::FailedToDeserializeData(data))?;
+        bitcode::deserialize(&data).context(UtilsError::FailedToDeserializeData(data))?;
     Ok(value)
 }
 
@@ -240,17 +241,17 @@ where
 
     let file = tokio::fs::File::open(path)
         .await
-        .context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToOpenFile(path.to_path_buf()))?;
     let mut reader = tokio::io::BufReader::new(file);
     let mut data = Vec::new();
 
     reader
         .read_to_end(&mut data)
         .await
-        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToReadFile(path.to_path_buf()))?;
 
     let value: T =
-        bitcode::deserialize(&data).context(MiniDBError::FailedToDeserializeData(data))?;
+        bitcode::deserialize(&data).context(UtilsError::FailedToDeserializeData(data))?;
     Ok(value)
 }
 
@@ -283,13 +284,13 @@ where
 }
 
 fn read_from_file_impl(path: &Path) -> Result<String> {
-    let file = File::open(path).context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+    let file = File::open(path).context(UtilsError::FailedToOpenFile(path.to_path_buf()))?;
     let mut reader = BufReader::new(file);
     let mut data = String::new();
 
     reader
         .read_to_string(&mut data)
-        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToReadFile(path.to_path_buf()))?;
 
     Ok(data)
 }
@@ -329,14 +330,14 @@ async fn read_from_file_async_impl(path: &Path) -> Result<String> {
 
     let file = tokio::fs::File::open(path)
         .await
-        .context(MiniDBError::FailedToOpenFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToOpenFile(path.to_path_buf()))?;
     let mut reader = tokio::io::BufReader::new(file);
     let mut data = String::new();
 
     reader
         .read_to_string(&mut data)
         .await
-        .context(MiniDBError::FailedToReadFile(path.to_path_buf()))?;
+        .context(UtilsError::FailedToReadFile(path.to_path_buf()))?;
 
     Ok(data)
 }
@@ -390,25 +391,25 @@ where
     T: Serialize,
 {
     let temp_file = NamedTempFile::new_in(path.parent().unwrap_or(Path::new(".")))
-        .context(MiniDBError::FailedToCreateTempFile)?;
+        .context(UtilsError::FailedToCreateTempFile)?;
     let temp_path = temp_file.path().to_path_buf();
 
     let mut writer = BufWriter::new(temp_file);
-    let data = bitcode::serialize(value).context(MiniDBError::FailedToSerializeValue)?;
+    let data = bitcode::serialize(value).context(UtilsError::FailedToSerializeValue)?;
 
     writer
         .write_all(&data)
-        .context(MiniDBError::FailedToWriteTempFile(temp_path.clone()))?;
+        .context(UtilsError::FailedToWriteTempFile(temp_path.clone()))?;
     writer
         .flush()
-        .context(MiniDBError::FailedToFlushTempFile(temp_path.clone()))?;
+        .context(UtilsError::FailedToFlushTempFile(temp_path.clone()))?;
 
     let temp_file = writer
         .into_inner()
-        .context(MiniDBError::FailedToGetInnerWriter)?;
+        .context(UtilsError::FailedToGetInnerWriter)?;
     temp_file
         .persist(path)
-        .context(MiniDBError::FailedToPersistTempFile {
+        .context(UtilsError::FailedToPersistTempFile {
             temp: temp_path,
             orig: path.to_path_buf(),
         })?;
@@ -470,28 +471,28 @@ where
     use tokio::io::AsyncWriteExt;
 
     let temp_file = NamedTempFile::new_in(path.parent().unwrap_or(Path::new(".")))
-        .context(MiniDBError::FailedToCreateTempFile)?;
+        .context(UtilsError::FailedToCreateTempFile)?;
     let temp_path = temp_file.path().to_path_buf();
     let mut temp_file_async = tokio::fs::File::from_std(
         temp_file
             .reopen()
-            .context(MiniDBError::FailedToReopenTempFile(temp_path.clone()))?,
+            .context(UtilsError::FailedToReopenTempFile(temp_path.clone()))?,
     );
     let mut writer = tokio::io::BufWriter::new(&mut temp_file_async);
-    let data = bitcode::serialize(value).context(MiniDBError::FailedToSerializeValue)?;
+    let data = bitcode::serialize(value).context(UtilsError::FailedToSerializeValue)?;
 
     writer
         .write_all(&data)
         .await
-        .context(MiniDBError::FailedToWriteTempFile(temp_path.clone()))?;
+        .context(UtilsError::FailedToWriteTempFile(temp_path.clone()))?;
     writer
         .flush()
         .await
-        .context(MiniDBError::FailedToFlushTempFile(temp_path.clone()))?;
+        .context(UtilsError::FailedToFlushTempFile(temp_path.clone()))?;
 
     temp_file
         .persist(path)
-        .context(MiniDBError::FailedToPersistTempFile {
+        .context(UtilsError::FailedToPersistTempFile {
             temp: temp_path,
             orig: path.to_path_buf(),
         })?;

@@ -11,3 +11,4 @@ repository = "https://github.com/DarkCeptor44/minidb"
 
 [workspace.dependencies]
 anyhow = "^1"
+thiserror = "^2"

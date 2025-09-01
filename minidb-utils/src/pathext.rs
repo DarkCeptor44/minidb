@@ -1,7 +1,7 @@
 use std::path::Path;
 
+use crate::UtilsError;
 use anyhow::{Context, Result};
-use minidb_shared::MiniDBError;
 
 /// Extension trait for [`Path`], [`PathBuf`](std::path::PathBuf) or anything that implements [`AsRef<Path>`].
 pub trait PathExt {
@@ -39,7 +39,7 @@ where
 
         let mut dir = path
             .read_dir()
-            .context(MiniDBError::FailedToReadDir(path.to_path_buf()))?;
+            .context(UtilsError::FailedToReadDir(path.to_path_buf()))?;
         Ok(dir.next().is_none())
     }
 }

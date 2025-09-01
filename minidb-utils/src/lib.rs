@@ -46,6 +46,32 @@
 //!
 //! ## Benchmarks
 //!
+//! ### Cryptographic
+//!
+//! The tuple in [`derive_key`] is `(memory_cost, iterations, parallelism)`, where:
+//!
+//! * Memory cost of 1024 is benchmarked but is not recommended
+//! * 19 MiB is recommended with `T` of 2 or 3 and `P` of 1 and is the default of [Argon2](argon2)
+//! * 64 MiB with `T` of 3 and `P` of 2 is used by [Bitwarden](https://bitwarden.com)
+//!
+//! ```text
+//! Timer precision: 100 ns
+//! crypto               fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ├─ derive_key                      │               │               │               │         │
+//! │  ├─ (1024, 2, 1)   864.6 µs      │ 1.113 ms      │ 887.8 µs      │ 900.7 µs      │ 100     │ 100
+//! │  ├─ (19456, 3, 1)  25.76 ms      │ 30.3 ms       │ 26.62 ms      │ 26.77 ms      │ 100     │ 100
+//! │  ╰─ (65536, 3, 2)  96.15 ms      │ 102.2 ms      │ 97.62 ms      │ 97.86 ms      │ 100     │ 100
+//! ├─ generate_salt     40.38 ns      │ 41.16 ns      │ 40.77 ns      │ 40.6 ns       │ 100     │ 25600
+//! ├─ hash_password                   │               │               │               │         │
+//! │  ├─ (1024, 2, 1)   899.6 µs      │ 1.102 ms      │ 920.3 µs      │ 931.2 µs      │ 100     │ 100
+//! │  ├─ (19456, 3, 1)  24.59 ms      │ 29.19 ms      │ 25.97 ms      │ 26.15 ms      │ 100     │ 100
+//! │  ╰─ (65536, 3, 2)  94.87 ms      │ 100.2 ms      │ 97.22 ms      │ 97.3 ms       │ 100     │ 100
+//! ╰─ verify_password                 │               │               │               │         │
+//!    ├─ (1024, 2, 1)   900.5 µs      │ 1.344 ms      │ 920.6 µs      │ 941.2 µs      │ 100     │ 100
+//!    ├─ (19456, 3, 1)  24.63 ms      │ 32 ms         │ 25.71 ms      │ 25.96 ms      │ 100     │ 100
+//!    ╰─ (65536, 3, 2)  95.49 ms      │ 106.2 ms      │ 97.27 ms      │ 97.54 ms      │ 100     │ 100
+//! ```
+//!
 //! ### File related
 //!
 //! ```text

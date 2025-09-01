@@ -9,21 +9,41 @@ pub enum UtilsError {
     #[error("Failed to create temporary file")]
     FailedToCreateTempFile,
 
+    /// Failed to derive key
+    #[error("Failed to derive key")]
+    FailedToDeriveKey,
+
     /// Failed to deserialize [`bitcode`] data
     #[error("Failed to deserialize data: {0:?}")]
     FailedToDeserializeData(Vec<u8>),
+
+    /// Failed to encode salt
+    #[error("Failed to encode salt to Base64: {0:?}")]
+    FailedToEncodeSalt(Vec<u8>),
 
     /// Failed to flush temporary file
     #[error("Failed to flush temporary file: {0}")]
     FailedToFlushTempFile(PathBuf),
 
+    /// Failed to generate salt
+    #[error("Failed to generate salt")]
+    FailedToGenerateSalt,
+
     /// Failed to get temporary file from writer
     #[error("Failed to get temporary file from writer")]
     FailedToGetInnerWriter,
 
+    /// Failed to hash password
+    #[error("Failed to hash password")]
+    FailedToHashPassword,
+
     /// Failed to open file
     #[error("Failed to open file: {0}")]
     FailedToOpenFile(PathBuf),
+
+    /// Failed to parse PHC string
+    #[error("Failed to parse PHC string: {0}")]
+    FailedToParsePHCString(String),
 
     /// Failed to persist temporary file
     #[error("Failed to persist temporary file `{temp}`: {orig}")]

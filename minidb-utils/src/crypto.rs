@@ -1,4 +1,4 @@
-use crate::IntoOptional;
+use crate::{IntoOptional, UtilsError};
 use anyhow::{anyhow, Context, Result};
 use argon2::{
     password_hash::{Salt as Argon2Salt, SaltString},
@@ -59,7 +59,7 @@ fn derive_key_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<Vec<
 
     ctx.hash_password_into(pass, salt, &mut key)
         .map_err(|e| anyhow!(e))
-        .context("Failed to derive key")?;
+        .context(UtilsError::FailedToDeriveKey)?;
 
     Ok(key)
 }
@@ -86,7 +86,7 @@ pub fn generate_salt() -> Result<[u8; 16]> {
     let mut salt = [0u8; 16];
 
     rng.try_fill_bytes(&mut salt)
-        .context("Failed to generate salt")?;
+        .context(UtilsError::FailedToGenerateSalt)?;
     Ok(salt)
 }
 
@@ -144,11 +144,13 @@ where
 fn hash_password_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<String> {
     let ctx = ctx.unwrap_or_default();
     let salt_string = SaltString::encode_b64(salt)
-        .map_err(|e| anyhow!("Failed to encode salt to Base64: {e}"))?;
+        .map_err(|e| anyhow!(e))
+        .context(UtilsError::FailedToEncodeSalt(salt.to_vec()))?;
     let salt: Argon2Salt = (&salt_string).into();
     let hash = ctx
         .hash_password(pass, salt)
-        .map_err(|e| anyhow!("Failed to hash password: {e}"))?;
+        .map_err(|e| anyhow!(e))
+        .context(UtilsError::FailedToHashPassword)?;
     Ok(hash.to_string())
 }
 
@@ -190,8 +192,9 @@ where
 }
 
 fn verify_password_impl(pass: &[u8], hash: &str) -> Result<bool> {
-    let parsed_hash =
-        PasswordHash::new(hash).map_err(|e| anyhow!("Failed to parse PHC string: {e}"))?;
+    let parsed_hash = PasswordHash::new(hash)
+        .map_err(|e| anyhow!(e))
+        .context(UtilsError::FailedToParsePHCString(hash.to_string()))?;
     let ctx = Argon2::default();
     Ok(ctx.verify_password(pass, &parsed_hash).is_ok())
 }

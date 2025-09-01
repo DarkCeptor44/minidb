@@ -32,6 +32,10 @@ divan = "^0.1"
 tokio = { version = "^1", features = ["macros", "rt-multi-thread"] }
 
 [[bench]]
+name = "crypto"
+harness = false
+
+[[bench]]
 name = "fs"
 harness = false
 

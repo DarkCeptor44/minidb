@@ -87,7 +87,40 @@ impl MiniDBFieldAttributes {
     }
 }
 
+/// Derives `AsTable` for a struct
+///
+/// ## Attributes
+///
+/// ### Struct
+///
+/// * `#[minidb(name = "custom_name")]` - Sets a different name for the struct/table. Names get converted to snake case
+///
+/// ### Field
+///
+/// * `#[key]` - Sets the field as a primary key
+/// * `#[foreign_key]` - Sets the field as a foreign key to the referenced table's primary key, for example:
+///
+/// ```rust,ignore
+/// #[foreign_key]
+/// customer_id: Id<Person>, // references the primary key of the `Person` table
+/// ```
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use minidb::Table;
+///
+/// #[derive(Table)]
+/// #[minidb(name = "people")]
+/// struct Person {
+///     #[key]
+///     id: Id<Self>,
+///     name: String,
+///     age: u8,
+/// }
+/// ```
 #[proc_macro_derive(Table, attributes(serde, minidb, key, foreign_key))]
+#[allow(clippy::too_many_lines)]
 pub fn table_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let struct_name = input.ident;

@@ -20,7 +20,7 @@ use rand::TryRngCore;
 ///
 /// ## Errors
 ///
-/// Returns an error if the key derivation fails, refer to [`Argon2::hash_password_into`] for why it might fail
+/// * [`UtilsError::FailedToDeriveKey`]: Key derivation failed, refer to [`Argon2::hash_password_into`] for why it might fail
 ///
 /// ## Examples
 ///
@@ -72,7 +72,7 @@ fn derive_key_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<Vec<
 ///
 /// ## Errors
 ///
-/// Returns an error if failed to generate salt, refer to [`rand::rngs::OsRng::try_fill_bytes`] for why it might fail
+/// * [`UtilsError::FailedToGenerateSalt`]: salt generation failed, refer to [`rand::rngs::OsRng::try_fill_bytes`] for why it might fail
 ///
 /// ## Example
 ///
@@ -104,7 +104,8 @@ pub fn generate_salt() -> Result<[u8; 16]> {
 ///
 /// ## Errors
 ///
-/// Returns an error if the password hashing fails, refer to [`PasswordHasher::hash_password`] for why it might fail
+/// * [`UtilsError::FailedToEncodeSalt`]: could not encode salt to Base64
+/// * [`UtilsError::FailedToHashPassword`]: password hashing failed, refer to [`PasswordHasher::hash_password`] for why it might fail
 ///
 /// ## Examples
 ///
@@ -167,7 +168,7 @@ fn hash_password_impl(ctx: Option<Argon2>, pass: &[u8], salt: &[u8]) -> Result<S
 ///
 /// ## Errors
 ///
-/// Returns an error if the password verification fails, refer to [`PasswordVerifier::verify_password`] for why it might fail
+/// * [`UtilsError::FailedToParsePHCString`]: could not parse the PHC string, refer to [`PasswordVerifier::verify_password`] for why it might fail
 ///
 /// ## Example
 ///

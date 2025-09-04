@@ -107,7 +107,7 @@ use std::{
 };
 
 pub use crypto::{derive_key, generate_salt, hash_password, verify_password};
-pub use errors::*;
+pub use errors::UtilsError;
 pub use pathext::PathExt;
 
 use anyhow::{Context, Result};

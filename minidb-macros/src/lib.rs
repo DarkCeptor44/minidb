@@ -21,7 +21,10 @@ use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::Span;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput, Error, Ident, Lit, LitStr, parse_macro_input};
+use syn::{
+    Attribute, Data, DeriveInput, Error, GenericArgument, Ident, Lit, LitStr, PathArguments, Type,
+    parse_macro_input,
+};
 
 /// Represents the `minidb` attribute on a struct
 #[derive(Debug, Default)]
@@ -129,12 +132,155 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
 
     let mut id_field_ident: Option<Ident> = None;
     let mut num_keys_fields = 0;
-    let mut foreign_key_entries: Vec<TokenStream> = Vec::new();
+    let mut foreign_key_entries = Vec::new();
 
-    let out = quote! {};
+    for field in &fields {
+        let Some(ident) = field.ident.as_ref() else {
+            return Error::new_spanned(field, "Struct field must have a name")
+                .to_compile_error()
+                .into();
+        };
 
-    return Error::new_spanned(struct_name, out)
+        let ty = &field.ty;
+        let field_attrs = MiniDBFieldAttributes::from_attributes(&field.attrs);
+
+        if field_attrs.is_key {
+            num_keys_fields += 1;
+            id_field_ident = Some(ident.clone());
+
+            let is_id_type = is_id_type(ty);
+            if !is_id_type {
+                return Error::new_spanned(ty, "The #[key] field must be of type `Id<Self>`.")
+                    .to_compile_error()
+                    .into();
+            }
+        }
+
+        if field_attrs.is_foreign_key {
+            let ref_table = match get_ref_table(ty) {
+                Ok(t) => t,
+                Err(e) => return e.to_compile_error().into(),
+            };
+
+            foreign_key_entries.push(quote! {
+                (stringify!(#ident), #ref_table, Box::new(|s: &Self| s.#ident.value.as_deref()))
+            });
+        }
+    }
+
+    if num_keys_fields != 1 {
+        return Error::new_spanned(
+            struct_name,
+            "A struct deriving `Table` must have exactly one field marked with `#[key]`.",
+        )
         .to_compile_error()
         .into();
+    }
+
+    let Some(id_field_ident) = id_field_ident else {
+        return Error::new_spanned(
+            fields,
+            "A struct deriving `Table` must have exactly one field marked with `#[key]`.",
+        )
+        .to_compile_error()
+        .into();
+    };
+
+    let out = quote! {
+        impl #crate_path::AsTable for #struct_name #impl_generics #ty_generics #where_clause {
+            fn name() -> &'static str {
+                #table_name
+            }
+
+            fn get_id(&self) -> &#crate_path::Id<Self> {
+                &self.#id_field_ident
+            }
+
+            fn set_id(&mut self, id: #crate_path::Id<Self>) {
+                self.#id_field_ident = id;
+            }
+
+            fn get_foreign_keys() -> Vec<(&'static str, &'static str, Box<dyn Fn(&Self) -> Option<&str> + Send + Sync>)> {
+                vec![
+                    #(#foreign_key_entries),*
+                ]
+            }
+        }
+    };
+
+    // return Error::new_spanned(struct_name, out)
+    //     .to_compile_error()
+    //     .into();
     out.into()
+}
+
+fn is_id_type(ty: &Type) -> bool {
+    if let Type::Path(type_path) = ty {
+        if let Some(last_segment) = type_path.path.segments.last() {
+            if last_segment.ident == "Id" {
+                // checks if it has generic arguments
+                if let PathArguments::AngleBracketed(args) = &last_segment.arguments {
+                    // check if it has only 1 generic argument
+                    args.args.len() == 1
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    }
+}
+
+fn get_ref_table(ty: &Type) -> Result<String, Error> {
+    match ty {
+        Type::Path(type_path) => match type_path.path.segments.last() {
+            Some(last_segment) => {
+                if last_segment.ident == "Id" {
+                    match &last_segment.arguments {
+                        PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
+                            match &args.args[0] {
+                                GenericArgument::Type(Type::Path(type_path)) => {
+                                    match type_path.path.segments.last() {
+                                        Some(inner_last_segment) => {
+                                            Ok(inner_last_segment.ident.to_string())
+                                        }
+                                        _ => Err(Error::new_spanned(
+                                            ty,
+                                            "Foreign key field must be of type `Id<Table>`.",
+                                        )),
+                                    }
+                                }
+                                _ => Err(Error::new_spanned(
+                                    ty,
+                                    "Foreign key field must be of type `Id<Table>`.",
+                                )),
+                            }
+                        }
+                        _ => Err(Error::new_spanned(
+                            ty,
+                            "Foreign key field must be of type `Id<Table>`.",
+                        )),
+                    }
+                } else {
+                    Err(Error::new_spanned(
+                        ty,
+                        "Foreign key field must be of type `Id<Table>`.",
+                    ))
+                }
+            }
+            _ => Err(Error::new_spanned(
+                ty,
+                "Foreign key field must be of type `Id<Table>`.",
+            )),
+        },
+        _ => Err(Error::new_spanned(
+            ty,
+            "Foreign key field must be of type `Id<Table>`.",
+        )),
+    }
 }

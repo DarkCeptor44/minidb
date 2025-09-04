@@ -1,10 +1,11 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["minidb", "minidb-shared", "minidb-utils"]
 
 [workspace.package]
 authors = ["DarkCeptor44"]
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 license = "LGPL-3.0-or-later"
 homepage = "https://github.com/DarkCeptor44/minidb"
 repository = "https://github.com/DarkCeptor44/minidb"

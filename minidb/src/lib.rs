@@ -21,11 +21,15 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_docs, missing_debug_implementations)]
 
+mod traits;
+
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
     sync::Arc,
 };
+
+pub use traits::{AsTable, Id};
 
 use anyhow::Result;
 use parking_lot::RwLock;

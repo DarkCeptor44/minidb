@@ -21,6 +21,10 @@ pub enum DBError {
     #[error("Failed to read metadata")]
     FailedToReadMetadata,
 
+    /// Failed to remove/delete file
+    #[error("Failed to remove file: {0}")]
+    FailedToRemoveFile(PathBuf),
+
     /// Failed to serialize file
     #[error("Failed to serialize file: {0}")]
     FailedToSerializeFile(PathBuf),

@@ -18,10 +18,6 @@ use thiserror::Error;
 /// Represents errors that can occur when using the database
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum MiniDBError {
-    /// Failed to remove/delete file
-    #[error("Failed to remove file: {0}")]
-    FailedToRemoveFile(PathBuf),
-
     /// Failed to write file
     #[error("Failed to write to file: {0}")]
     FailedToWriteFile(PathBuf),

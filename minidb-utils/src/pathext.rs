@@ -9,7 +9,7 @@ pub trait PathExt {
     ///
     /// ## Errors
     ///
-    /// Returns an error if the directory could not be read
+    /// * [`UtilsError::FailedToReadDir`]: The directory could not be read
     ///
     /// ## Example
     ///

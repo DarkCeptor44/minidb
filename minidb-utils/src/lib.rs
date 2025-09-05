@@ -148,12 +148,9 @@ impl<T> IntoOptional<T> for Option<T> {
 ///
 /// ## Errors
 ///
-/// Returns an error if:
-///
-/// * Path does not exist
-/// * Failed to open file
-/// * Failed to read file
-/// * Failed to deserialize
+/// * [`UtilsError::FailedToOpenFile`]: The file could not be opened
+/// * [`UtilsError::FailedToReadFile`]: The file could not be read
+/// * [`UtilsError::FailedToDeserializeData`]: The data could not be deserialized
 ///
 /// ## Example
 ///
@@ -206,12 +203,9 @@ where
 ///
 /// ## Errors
 ///
-/// Returns an error if:
-///
-/// * Path does not exist
-/// * Failed to open file
-/// * Failed to read file
-/// * Failed to deserialize
+/// * [`UtilsError::FailedToOpenFile`]: The file could not be opened
+/// * [`UtilsError::FailedToReadFile`]: The file could not be read
+/// * [`UtilsError::FailedToDeserializeData`]: The data could not be deserialized
 ///
 /// ## Example
 ///
@@ -271,7 +265,8 @@ where
 ///
 /// ## Errors
 ///
-/// Returns an error if the path does not exist, failed to open or failed to be read
+/// * [`UtilsError::FailedToOpenFile`]: The file could not be opened
+/// * [`UtilsError::FailedToReadFile`]: The file could not be read
 ///
 /// ## Example
 ///
@@ -311,7 +306,8 @@ fn read_from_file_impl(path: &Path) -> Result<String> {
 ///
 /// ## Errors
 ///
-/// Returns an error if the path does not exist, failed to open or failed to be read
+/// * [`UtilsError::FailedToOpenFile`]: The file could not be opened
+/// * [`UtilsError::FailedToReadFile`]: The file could not be read
 ///
 /// ## Example
 ///
@@ -355,13 +351,12 @@ async fn read_from_file_async_impl(path: &Path) -> Result<String> {
 ///
 /// ## Errors
 ///
-/// Returns an error if:
-///
-/// * Failed to create temporary file
-/// * Failed to serialize value
-/// * Failed to write or flush temporary file
-/// * Failed to get temporary file from writer
-/// * Failed to persist temporary file
+/// * [`UtilsError::FailedToCreateTempFile`]: The temp file could not be created
+/// * [`UtilsError::FailedToSerializeValue`]: The value could not be serialized
+/// * [`UtilsError::FailedToWriteTempFile`]: The temp file could not be written to
+/// * [`UtilsError::FailedToFlushTempFile`]: The temp file could not be flushed
+/// * [`UtilsError::FailedToGetInnerWriter`]: The inner writer could not be obtained
+/// * [`UtilsError::FailedToPersistTempFile`]: The temp file could not be persisted
 ///
 /// ## Example
 ///
@@ -430,14 +425,12 @@ where
 ///
 /// ## Errors
 ///
-/// Returns an error if:
-///
-/// * Failed to create temporary file
-/// * Failed to reopen temporary file
-/// * Failed to serialize value
-/// * Failed to write or flush temporary file
-/// * Failed to get temporary file from writer
-/// * Failed to persist temporary file
+/// * [`UtilsError::FailedToCreateTempFile`]: The temp file could not be created
+/// * [`UtilsError::FailedToReopenTempFile`]: The temp file could not be reopened
+/// * [`UtilsError::FailedToSerializeValue`]: The value could not be serialized
+/// * [`UtilsError::FailedToWriteTempFile`]: The temp file could not be written to
+/// * [`UtilsError::FailedToFlushTempFile`]: The temp file could not be flushed
+/// * [`UtilsError::FailedToPersistTempFile`]: The temp file could not be persisted
 ///
 /// ## Example
 ///

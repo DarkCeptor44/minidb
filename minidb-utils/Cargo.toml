@@ -32,8 +32,22 @@ tokio = { version = "^1", features = ["fs", "io-util"], optional = true }
 divan = "^0.1"
 tokio = { version = "^1", features = ["macros", "rt-multi-thread"] }
 
+# for format benches
+ciborium = "^0.2"
+minicbor-serde = { version = "^0.6", features = ["alloc"] }
+postcard = { version = "^1", features = ["use-std"] }
+rmp-serde = "^1"
+serde_cbor = "^0.11"
+serde_json = "^1"
+simd-json = "^0.15"
+speedy = "^0.8"
+
 [[bench]]
 name = "crypto"
+harness = false
+
+[[bench]]
+name = "formats"
 harness = false
 
 [[bench]]

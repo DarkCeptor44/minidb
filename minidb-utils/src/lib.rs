@@ -136,6 +136,28 @@
 //! path         fastest       │ slowest       │ median        │ mean          │ samples │ iters
 //! ╰─ is_empty  222.6 µs      │ 325.1 µs      │ 231.9 µs      │ 240.6 µs      │ 100     │ 100
 //! ```
+//!
+//! ### Binary formats
+//!
+//! ```text
+//! Timer precision: 100 ns
+//! formats            fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ├─ bitcode                       │               │               │               │         │
+//! │  ├─ deserialize  541.9 µs      │ 2.083 ms      │ 607.2 µs      │ 688.8 µs      │ 100     │ 100
+//! │  ╰─ serialize    137.6 µs      │ 1.635 ms      │ 171.4 µs      │ 194.3 µs      │ 100     │ 100
+//! ├─ minicbor                      │               │               │               │         │
+//! │  ├─ deserialize  1.104 ms      │ 2.641 ms      │ 1.227 ms      │ 1.314 ms      │ 100     │ 100
+//! │  ╰─ serialize    149.2 µs      │ 528.8 µs      │ 261.2 µs      │ 260.1 µs      │ 100     │ 100
+//! ├─ postcard                      │               │               │               │         │
+//! │  ├─ deserialize  485 µs        │ 1.536 ms      │ 509.9 µs      │ 616 µs        │ 100     │ 100
+//! │  ╰─ serialize    66.39 µs      │ 149 µs        │ 66.59 µs      │ 73.91 µs      │ 100     │ 100
+//! ├─ rmp_serde                     │               │               │               │         │
+//! │  ├─ deserialize  779.8 µs      │ 4.313 ms      │ 1.237 ms      │ 1.31 ms       │ 100     │ 100
+//! │  ╰─ serialize    91.19 µs      │ 229.4 µs      │ 91.54 µs      │ 93.73 µs      │ 100     │ 100
+//! ╰─ speedy_vec                    │               │               │               │         │
+//!    ├─ deserialize  397.5 µs      │ 2.375 ms      │ 592.8 µs      │ 649.8 µs      │ 100     │ 100
+//!    ╰─ serialize    32.59 µs      │ 112.9 µs      │ 62.89 µs      │ 64.02 µs      │ 100     │ 100
+//! ```
 
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]

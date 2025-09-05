@@ -1,11 +1,13 @@
 use divan::{Bencher, black_box};
 use minidb_utils::{self as utils, ArgonParams};
 
+const T: &[usize] = &[1, 4, 8, 16];
+
 fn main() {
     divan::main();
 }
 
-#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)])]
+#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)], threads = T)]
 fn derive_key(b: Bencher, p: (u32, u32, u32)) {
     b.with_inputs(|| ArgonParams::new().m_cost(p.0).t_cost(p.1).p_cost(p.2))
         .bench_values(|p| {
@@ -15,12 +17,12 @@ fn derive_key(b: Bencher, p: (u32, u32, u32)) {
         });
 }
 
-#[divan::bench]
+#[divan::bench(threads = T)]
 fn generate_salt() {
     black_box(utils::generate_salt().expect("Failed to generate salt"));
 }
 
-#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)])]
+#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)], threads = T)]
 fn hash_password(b: Bencher, p: (u32, u32, u32)) {
     b.with_inputs(|| ArgonParams::new().m_cost(p.0).t_cost(p.1).p_cost(p.2))
         .bench_values(|p| {
@@ -31,7 +33,7 @@ fn hash_password(b: Bencher, p: (u32, u32, u32)) {
         });
 }
 
-#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)])]
+#[divan::bench(args = [(1024, 2, 1), (19*1024, 3, 1), (64*1024, 3, 2)], threads = T)]
 fn verify_password(b: Bencher, p: (u32, u32, u32)) {
     b.with_inputs(|| {
         let pass = "password";

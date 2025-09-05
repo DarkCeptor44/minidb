@@ -33,9 +33,17 @@ pub enum DBError {
     #[error("Failed to serialize metadata")]
     FailedToSerializeMetadata,
 
+    /// Failed to write file
+    #[error("Failed to write to file: {0}")]
+    FailedToWriteFile(PathBuf),
+
     /// Failed to write metadata
     #[error("Failed to write metadata")]
     FailedToWriteMetadata,
+
+    /// File does not exist
+    #[error("File does not exist: {0}")]
+    FileDoesNotExist(PathBuf),
 
     /// Folder already exists
     #[error("Folder already exists and is not empty: {0}")]

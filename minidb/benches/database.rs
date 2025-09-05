@@ -53,6 +53,31 @@ fn insert_one(b: Bencher) {
 }
 
 #[divan::bench(threads = T)]
+fn insert_1000(b: Bencher) {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_path = temp_dir.path();
+    let db = Database::builder()
+        .path(temp_path)
+        .table::<Person>()
+        .build()
+        .expect("Failed to create database");
+
+    let p = Person {
+        id: Id::new(),
+        name: "John Doe".into(),
+        age: 31,
+    };
+
+    b.bench(|| {
+        for _ in 0..1000 {
+            let id = p.insert(black_box(&db)).expect("Failed to insert person");
+            black_box(id);
+        }
+        black_box(());
+    });
+}
+
+#[divan::bench(threads = T)]
 fn update(b: Bencher) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();

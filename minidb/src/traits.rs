@@ -375,7 +375,7 @@ impl<T> Id<T> {
         Self::with_value(None)
     }
 
-    /// Creates a new ID with a [Option<String>]
+    /// Creates a new ID with a [Option]
     #[must_use]
     pub fn with_value(value: Option<String>) -> Self {
         Self {

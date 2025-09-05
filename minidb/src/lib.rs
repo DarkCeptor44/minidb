@@ -21,18 +21,25 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_docs, missing_debug_implementations)]
 
+mod errors;
 mod traits;
 
 use std::{
     collections::HashSet,
+    fs::create_dir_all,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
+pub use errors::DBError;
+pub use minidb_macros::Table;
 pub use traits::{AsTable, Id};
 
-use anyhow::Result;
-use parking_lot::RwLock;
+use anyhow::{Context, Result, anyhow};
+use minidb_utils::{PathExt, deserialize_file, serialize_file};
+use parking_lot::{RwLock, RwLockReadGuard};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use serde::{Deserialize, Serialize};
 
 /// Database client
 #[derive(Debug, Clone)]
@@ -51,6 +58,42 @@ impl Database {
     // ----------------------
     // END OF BUILDER METHODS
     // ----------------------
+
+    /// Returns the metadata of the database
+    fn metadata(&self) -> Result<Option<Metadata>> {
+        let path_guard = self.path.read();
+        let path = path_guard.as_path();
+        let file_path = path.join("metadata");
+
+        if !file_path.is_file() {
+            return Ok(None);
+        }
+
+        let _lock = self.file_lock.read();
+        let data: Metadata =
+            deserialize_file(file_path).context(anyhow!("Failed to read metadata"))?;
+
+        Ok(Some(data))
+    }
+
+    /// Returns a read guard to the database path.
+    ///
+    /// The guard dereferences to a [`&PathBuf`](PathBuf) or [`&Path`](Path)
+    pub fn path(&self) -> RwLockReadGuard<'_, PathBuf> {
+        self.path.read()
+    }
+
+    /// Writes the metadata of the database
+    fn write_metadata(&self, meta: &Metadata) -> Result<()> {
+        let path_guard = self.path.read();
+        let path = path_guard.as_path();
+        let file_path = path.join("metadata");
+
+        let _lock = self.file_lock.write();
+        serialize_file(file_path, meta).context(anyhow!("Failed to serialize metadata"))?;
+
+        Ok(())
+    }
 }
 
 /// A builder for [Database]
@@ -102,10 +145,18 @@ impl DatabaseBuilder {
         self
     }
 
-    /// Adds a table to the database
+    /// Adds a table to the database.
+    ///
+    /// The table must implement the [`AsTable`] trait
     #[must_use]
-    pub fn table<T>(mut self) -> Self {
-        todo!()
+    pub fn table<T>(mut self) -> Self
+    where
+        T: AsTable,
+    {
+        let table_name = T::name();
+
+        self.tables.insert(table_name.to_string());
+        self
     }
 
     // ----------------------
@@ -117,7 +168,73 @@ impl DatabaseBuilder {
     /// ## Returns
     ///
     /// A database client
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::NoDatabasePath`]: No path was provided for the database
+    /// * [`DBError::FolderExists`]: Folder already exists and is not empty
+    /// * [`DBError::NoTables`]: No tables were provided
+    /// * [`DBError::FailedToCreateDatabase`]: Failed to create database directory
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::FailedToWriteMetadata`]: Failed to write metadata
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
     pub fn build(self) -> Result<Database> {
-        todo!()
+        let path = self.path.ok_or(DBError::NoDatabasePath)?;
+
+        if !path.is_empty()? {
+            return Err(DBError::FolderExists(path.clone()).into());
+        }
+
+        if self.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        create_dir_all(&path).context(DBError::FailedToCreateDatabase(path.clone()))?;
+
+        let db = Database {
+            path: Arc::new(RwLock::new(path.clone())),
+            file_lock: Arc::new(RwLock::new(())),
+        };
+        let meta =
+            if let Some(meta) = Database::metadata(&db).context(DBError::FailedToReadMetadata)? {
+                meta
+            } else {
+                let m = Metadata {
+                    tables: self.tables,
+                };
+
+                db.write_metadata(&m)
+                    .context(DBError::FailedToWriteMetadata)?;
+                m
+            };
+
+        meta.tables
+            .par_iter()
+            .map(|table| {
+                let table_path = path.join(table);
+                create_dir_all(&table_path).context(DBError::FailedToCreateTableDir(table_path))?;
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(db)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Metadata {
+    tables: HashSet<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+    struct Person {
+        #[key]
+        id: Id<Self>,
+        name: String,
+        age: u8,
     }
 }

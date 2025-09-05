@@ -20,7 +20,7 @@ type ForeignKeyTuple<S> = (
 
 /// A trait for defining a table
 pub trait AsTable: Sized {
-    /// The name of the table in snake_case
+    /// The name of the table in `snake_case`
     fn name() -> &'static str;
 
     /// The primary key of the table

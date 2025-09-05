@@ -18,3 +18,4 @@ parking_lot = "^0.12"
 rayon = "^1"
 serde = { version = "^1", features = ["derive"] }
 tempfile = "^3"
+thiserror.workspace = true

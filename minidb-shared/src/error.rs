@@ -18,14 +18,6 @@ use thiserror::Error;
 /// Represents errors that can occur when using the database
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum MiniDBError {
-    /// Failed to create database
-    #[error("Failed to create database directory: {0}")]
-    FailedToCreateDatabase(PathBuf),
-
-    /// Failed to create table
-    #[error("Failed to create table directory: {0}")]
-    FailedToCreateTableDir(PathBuf),
-
     /// Failed to deserialize file
     #[error("Failed to deserialize file: {0}")]
     FailedToDeserializeFile(PathBuf),
@@ -45,10 +37,6 @@ pub enum MiniDBError {
     /// File does not exist
     #[error("File does not exist: {0}")]
     FileDoesNotExist(PathBuf),
-
-    /// Folder already exists
-    #[error("Folder already exists and is not empty: {0}")]
-    FolderExists(PathBuf),
 
     /// Referenced record does not exist
     #[error("Field `{field}` references table `{table}` with ID `{id}`, which does not exist")]
@@ -79,14 +67,6 @@ pub enum MiniDBError {
         /// The ID of the referenced record
         id: String,
     },
-
-    /// No path was provided for the database
-    #[error("No path was provided for the database")]
-    NoDatabasePath,
-
-    /// No tables were found in the database
-    #[error("No tables found in database")]
-    NoTables,
 
     /// Record already exists
     #[error("Record already exists for table `{table}` with ID `{id}`")]

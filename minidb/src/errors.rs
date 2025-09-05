@@ -13,6 +13,10 @@ pub enum DBError {
     #[error("Failed to create table directory: {0}")]
     FailedToCreateTableDir(PathBuf),
 
+    /// Failed to deserialize file
+    #[error("Failed to deserialize file: {0}")]
+    FailedToDeserializeFile(PathBuf),
+
     /// Failed to read metadata
     #[error("Failed to read metadata")]
     FailedToReadMetadata,
@@ -55,6 +59,10 @@ pub enum DBError {
         id: String,
     },
 
+    /// Invalid primary key
+    #[error("Invalid primary key: {0}")]
+    InvalidKey(String),
+
     /// No path was provided for the database
     #[error("No path was provided for the database")]
     NoDatabasePath,
@@ -70,6 +78,16 @@ pub enum DBError {
     /// Record already exists
     #[error("Record already exists for table `{table}` with ID `{id}`")]
     RecordAlreadyExists {
+        /// The table name
+        table: String,
+
+        /// The ID of the record
+        id: String,
+    },
+
+    /// Record not found
+    #[error("Record not found for table `{table}` with ID `{id}`")]
+    RecordNotFound {
         /// The table name
         table: String,
 

@@ -11,7 +11,7 @@ use std::{
 use crate::{DBError, Database};
 use anyhow::{Context, Result};
 use cuid2::slug;
-use minidb_utils::serialize_file;
+use minidb_utils::{deserialize_file, serialize_file};
 use serde::{Deserialize, Serialize};
 
 type ForeignKeyTuple<S> = (
@@ -118,11 +118,62 @@ pub trait AsTable: Sized {
         Ok(id)
     }
 
+    /// Gets a record from a table
+    ///
+    /// ## Arguments
+    ///
+    /// * `db` - The database instance
+    /// * `id` - ID of the record to get
+    ///
+    /// ## Returns
+    ///
+    /// A record of type `T` where `T` implements [`AsTable`]
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToDeserializeFile`]: Failed to deserialize file
     fn get(db: &Database, id: &Id<Self>) -> Result<Self>
     where
         Self: for<'de> Deserialize<'de>,
     {
-        todo!()
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = db
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = Self::name();
+        let path = db.path.read();
+        let table_dir_path = path.join(table_name);
+        let file_path = table_dir_path.join(id);
+
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = db.file_lock.read();
+        let mut record: Self =
+            deserialize_file(&file_path).context(DBError::FailedToDeserializeFile(file_path))?;
+
+        record.set_id(id.clone());
+
+        Ok(record)
     }
 
     fn delete(db: &Database, id: &Id<Self>) -> Result<()> {

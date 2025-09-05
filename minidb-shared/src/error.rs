@@ -18,10 +18,6 @@ use thiserror::Error;
 /// Represents errors that can occur when using the database
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum MiniDBError {
-    /// Failed to deserialize file
-    #[error("Failed to deserialize file: {0}")]
-    FailedToDeserializeFile(PathBuf),
-
     /// Failed to remove/delete file
     #[error("Failed to remove file: {0}")]
     FailedToRemoveFile(PathBuf),
@@ -33,18 +29,4 @@ pub enum MiniDBError {
     /// File does not exist
     #[error("File does not exist: {0}")]
     FileDoesNotExist(PathBuf),
-
-    /// Invalid primary key
-    #[error("Invalid primary key: {0}")]
-    InvalidKey(String),
-
-    /// Record not found
-    #[error("Record not found for table `{table}` with ID `{id}`")]
-    RecordNotFound {
-        /// The table name
-        table: String,
-
-        /// The ID of the record
-        id: String,
-    },
 }

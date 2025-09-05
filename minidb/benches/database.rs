@@ -52,7 +52,6 @@ fn insert_one(b: Bencher) {
     });
 }
 
-/// FIXME Failed to update person: Failed to serialize file
 #[divan::bench(threads = T)]
 fn update(b: Bencher) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
@@ -63,16 +62,18 @@ fn update(b: Bencher) {
         .build()
         .expect("Failed to create database");
 
-    let mut p = Person {
-        id: Id::new(),
-        name: "John Doe".into(),
-        age: 31,
-    };
-
-    let id = p.insert(&db).expect("Failed to insert person");
-    p.id = id;
-
-    b.bench(|| {
+    b.with_inputs(|| {
+        let mut p = Person {
+            id: Id::new(),
+            name: "John Doe".into(),
+            age: 31,
+        };
+        let id = p.insert(&db).expect("Failed to insert person");
+        p.id = id;
+        p.age += 1;
+        p
+    })
+    .bench_values(|p| {
         p.update(black_box(&db)).expect("Failed to update person");
         black_box(());
     });

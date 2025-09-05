@@ -1,7 +1,3 @@
-//! # minidb macros
-//!
-//! This crate provides macros for the `minidb` crate
-
 // Copyright (c) 2025, DarkCeptor44
 //
 // This file is licensed under the GNU Lesser General Public License
@@ -12,6 +8,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
+
+//! # minidb macros
+//!
+//! This crate provides macros for the `minidb` crate
 
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]

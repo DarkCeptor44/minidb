@@ -9,10 +9,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use divan::{black_box, Bencher};
+use divan::{Bencher, black_box};
 use minidb_utils as utils;
 use serde::{Deserialize, Serialize};
-use tempfile::{tempdir, NamedTempFile};
+use tempfile::{NamedTempFile, tempdir};
 
 #[cfg(feature = "tokio")]
 use tokio::runtime::Runtime;

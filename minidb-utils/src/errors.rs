@@ -5,6 +5,10 @@ use thiserror::Error;
 /// Represents errors that can occur when using the utilities crate functions
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum UtilsError {
+    /// Failed to create params
+    #[error("Failed to create params")]
+    FailedToCreateParams,
+
     /// Failed to create temporary file
     #[error("Failed to create temporary file")]
     FailedToCreateTempFile,

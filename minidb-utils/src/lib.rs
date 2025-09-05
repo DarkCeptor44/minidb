@@ -106,7 +106,7 @@ use std::{
     path::Path,
 };
 
-pub use crypto::{derive_key, generate_salt, hash_password, verify_password};
+pub use crypto::{ArgonParams, derive_key, generate_salt, hash_password, verify_password};
 pub use errors::UtilsError;
 pub use pathext::PathExt;
 

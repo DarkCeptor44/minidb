@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use argon2::{Algorithm, Argon2, Params, PasswordHash, Version};
-use minidb_utils::{derive_key, generate_salt, hash_password, verify_password};
+use argon2::PasswordHash;
+use minidb_utils::{ArgonParams, derive_key, generate_salt, hash_password, verify_password};
 
 #[test]
 fn test_derive_key_simple() {
@@ -11,12 +11,12 @@ fn test_derive_key_simple() {
 
 #[test]
 fn test_derive_key_complex() {
-    let ctx = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(1024, 1, 1, Some(24)).expect("Failed to create argon2::Params"),
-    );
-    let key = derive_key(ctx, "password", "somesalt").expect("Failed to derive key");
+    let p = ArgonParams::new()
+        .m_cost(1024)
+        .t_cost(1)
+        .p_cost(1)
+        .output_len(24);
+    let key = derive_key(p, "password", "somesalt").expect("Failed to derive key");
     assert_eq!(dbg!(key).len(), 24);
 }
 
@@ -45,12 +45,12 @@ fn test_hash_password_default() {
 
 #[test]
 fn test_hash_password_19m_2t_1p_32() {
-    let ctx = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(19 * 1024, 2, 1, Some(32)).expect("Failed to create argon2::Params"),
-    );
-    let hash = hash_password(ctx, "password", "somesalt").expect("Failed to hash password");
+    let p = ArgonParams::new()
+        .m_cost(1024)
+        .t_cost(2)
+        .p_cost(1)
+        .output_len(32);
+    let hash = hash_password(p, "password", "somesalt").expect("Failed to hash password");
     PasswordHash::new(dbg!(&hash)).expect("Failed to parse password hash");
 }
 
@@ -65,12 +65,12 @@ fn test_verify_password_default() {
 #[test]
 fn test_verify_password_19m_2t_1p_32() {
     let password = "password".to_string();
-    let ctx = Argon2::new(
-        Algorithm::Argon2id,
-        Version::V0x13,
-        Params::new(19 * 1024, 2, 1, Some(32)).expect("Failed to create argon2::Params"),
-    );
-    let hash = hash_password(ctx, &password, "somesalt").expect("Failed to hash password");
+    let p = ArgonParams::new()
+        .m_cost(19 * 1024)
+        .t_cost(2)
+        .p_cost(1)
+        .output_len(32);
+    let hash = hash_password(p, &password, "somesalt").expect("Failed to hash password");
     assert!(!verify_password("wrongpass", &hash).expect("Failed to verify password"));
     assert!(verify_password(password, hash).expect("Failed to verify password"));
 }

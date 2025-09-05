@@ -4,12 +4,14 @@
 
 use std::{
     fmt::{Debug, Display},
+    fs::create_dir_all,
     path::Path,
 };
 
-use crate::Database;
-use anyhow::Result;
+use crate::{DBError, Database};
+use anyhow::{Context, Result};
 use cuid2::slug;
+use minidb_utils::serialize_file;
 use serde::{Deserialize, Serialize};
 
 type ForeignKeyTuple<S> = (
@@ -32,11 +34,88 @@ pub trait AsTable: Sized {
     /// The foreign keys of the table
     fn get_foreign_keys() -> Vec<ForeignKeyTuple<Self>>;
 
+    /// Inserts a record into the table and returns the ID
+    ///
+    /// ID will be generated automatically
+    ///
+    /// ## Arguments
+    ///
+    /// * `db` - The database instance
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordAlreadyExists`]: Record already exists
+    /// * [`DBError::ForeignKeyViolation`]: Referenced record does not exist
+    /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
+    /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
     fn insert(&self, db: &Database) -> Result<Id<Self>>
     where
         Self: Serialize,
     {
-        todo!()
+        let meta = db
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = Self::name();
+        if let Some(id) = &self.get_id().value {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.clone(),
+            }
+            .into());
+        }
+
+        for (field_name, ref_table, get_fk_id) in Self::get_foreign_keys() {
+            let fk_id_option = get_fk_id(self);
+            if let Some(fk_id_str) = fk_id_option {
+                if !db.record_exists(ref_table, fk_id_str) {
+                    return Err(DBError::ForeignKeyViolation {
+                        field: field_name.to_string(),
+                        table: ref_table.to_string(),
+                        id: fk_id_option.unwrap_or("").to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(DBError::InvalidForeignKey {
+                    field: field_name.to_string(),
+                    table: ref_table.to_string(),
+                    id: fk_id_option.unwrap_or("").to_string(),
+                }
+                .into());
+            }
+        }
+
+        let path = db.path.read();
+        let table_dir_path = path.join(table_name);
+
+        create_dir_all(&table_dir_path)
+            .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
+
+        let id = Id::generate();
+        let file_path = table_dir_path.join(&id);
+
+        if file_path.is_file() {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = db.file_lock.write();
+        serialize_file(&file_path, &self).context(DBError::FailedToSerializeFile(file_path))?;
+
+        Ok(id)
     }
 
     fn get(db: &Database, id: &Id<Self>) -> Result<Self>

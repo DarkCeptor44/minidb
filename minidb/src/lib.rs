@@ -83,6 +83,14 @@ impl Database {
         self.path.read()
     }
 
+    /// Checks if a record exists in the database
+    #[must_use]
+    pub fn record_exists(&self, table_name: &str, id_str: &str) -> bool {
+        let path = self.path.read();
+        let file_path = path.join(table_name).join(id_str);
+        file_path.is_file()
+    }
+
     /// Writes the metadata of the database
     fn write_metadata(&self, meta: &Metadata) -> Result<()> {
         let path_guard = self.path.read();

@@ -26,10 +26,6 @@ pub enum MiniDBError {
     #[error("Failed to remove file: {0}")]
     FailedToRemoveFile(PathBuf),
 
-    /// Failed to serialize file
-    #[error("Failed to serialize file: {0}")]
-    FailedToSerializeFile(PathBuf),
-
     /// Failed to write file
     #[error("Failed to write to file: {0}")]
     FailedToWriteFile(PathBuf),
@@ -38,45 +34,9 @@ pub enum MiniDBError {
     #[error("File does not exist: {0}")]
     FileDoesNotExist(PathBuf),
 
-    /// Referenced record does not exist
-    #[error("Field `{field}` references table `{table}` with ID `{id}`, which does not exist")]
-    ForeignKeyViolation {
-        /// The field name
-        field: String,
-
-        /// The referenced table
-        table: String,
-
-        /// The ID of the referenced record
-        id: String,
-    },
-
     /// Invalid primary key
     #[error("Invalid primary key: {0}")]
     InvalidKey(String),
-
-    /// Invalid foreign key
-    #[error("Field `{field}` references table `{table}` with ID `{id}`, which is invalid")]
-    InvalidForeignKey {
-        /// The field name
-        field: String,
-
-        /// The referenced table
-        table: String,
-
-        /// The ID of the referenced record
-        id: String,
-    },
-
-    /// Record already exists
-    #[error("Record already exists for table `{table}` with ID `{id}`")]
-    RecordAlreadyExists {
-        /// The table name
-        table: String,
-
-        /// The ID of the record
-        id: String,
-    },
 
     /// Record not found
     #[error("Record not found for table `{table}` with ID `{id}`")]

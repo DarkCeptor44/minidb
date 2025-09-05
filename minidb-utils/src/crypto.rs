@@ -7,7 +7,15 @@ use argon2::{
 use rand::TryRngCore;
 use serde::{Deserialize, Serialize};
 
-/// Argon2 parameters
+/// Argon2 parameters wrapper struct to make it easier to serialize/deserialize and pass it around
+///
+/// ## Example
+///
+/// ```rust
+/// use minidb_utils::ArgonParams;
+///
+/// let params = ArgonParams::new().m_cost(19 * 1024).t_cost(3).p_cost(2).output_len(32);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArgonParams {
     /// Memory size, expressed in kibibytes, between 8*`p_cost` and (2^32)-1.
@@ -56,34 +64,41 @@ impl TryFrom<ArgonParams> for Params {
 }
 
 impl ArgonParams {
-    /// Creates a new Argon2 parameters struct
+    /// Creates a new Argon2 parameters struct with default values
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets the memory size
+    /// Sets the memory size.
+    /// Expressed in kibibytes, between 8*`p_cost` and (2^32)-1.
+    ///
+    /// Value is an integer in decimal (1 to 10 digits).
     #[must_use]
     pub fn m_cost(mut self, memory: u32) -> Self {
         self.memory = memory;
         self
     }
 
-    /// Sets the number of iterations
+    /// Sets the number of iterations. Between 1 and (2^32)-1.
+    ///
+    /// Value is an integer in decimal (1 to 10 digits).
     #[must_use]
     pub fn t_cost(mut self, iterations: u32) -> Self {
         self.iterations = iterations;
         self
     }
 
-    /// Sets the degree of parallelism
+    /// Sets the degree of parallelism. Between 1 and (2^24)-1.
+    ///
+    /// Value is an integer in decimal (1 to 8 digits).
     #[must_use]
     pub fn p_cost(mut self, parallelism: u32) -> Self {
         self.parallelism = parallelism;
         self
     }
 
-    /// Sets the output length
+    /// Sets the output length in bytes
     #[must_use]
     pub fn output_len(mut self, output_len: usize) -> Self {
         self.output_len = output_len;

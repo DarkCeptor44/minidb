@@ -18,6 +18,10 @@
 //! * [`IntoOptional`]: Extension trait for [`Option<T>`]
 //! * [`PathExt`]: Extension trait for any type that implements [`AsRef<Path>`] that adds some useful functions
 //!
+//! ## Structs
+//!
+//! * [`ArgonParams`]: Struct to store Argon2 parameters that is easier to serialize/deserialize and pass it around
+//!
 //! ## Functions
 //!
 //! **Note:** `async` functions are only available with the `tokio` feature

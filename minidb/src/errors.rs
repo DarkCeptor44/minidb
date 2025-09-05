@@ -29,6 +29,10 @@ pub enum DBError {
     #[error("Failed to serialize file: {0}")]
     FailedToSerializeFile(PathBuf),
 
+    /// Failed to serialize metadata
+    #[error("Failed to serialize metadata")]
+    FailedToSerializeMetadata,
+
     /// Failed to write metadata
     #[error("Failed to write metadata")]
     FailedToWriteMetadata,

@@ -35,7 +35,7 @@ pub use errors::DBError;
 pub use minidb_macros::Table;
 pub use traits::{AsTable, Id};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use minidb_utils::{PathExt, deserialize_file, serialize_file};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -70,8 +70,7 @@ impl Database {
         }
 
         let _lock = self.file_lock.read();
-        let data: Metadata =
-            deserialize_file(file_path).context(anyhow!("Failed to read metadata"))?;
+        let data: Metadata = deserialize_file(file_path).context(DBError::FailedToReadMetadata)?;
 
         Ok(Some(data))
     }
@@ -98,7 +97,7 @@ impl Database {
         let file_path = path.join("metadata");
 
         let _lock = self.file_lock.write();
-        serialize_file(file_path, meta).context(anyhow!("Failed to serialize metadata"))?;
+        serialize_file(file_path, meta).context(DBError::FailedToSerializeMetadata)?;
 
         Ok(())
     }

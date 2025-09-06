@@ -29,5 +29,9 @@ pub trait AsTable: Sized {
     fn set_id(&mut self, id: Id<Self>);
 
     /// The foreign keys of the table
+    ///
+    /// ## Returns
+    ///
+    /// A vector of tuples in the format `(field_name, referenced_table, get_foreign_key)`
     fn get_foreign_keys() -> Vec<ForeignKeyTuple<Self>>;
 }

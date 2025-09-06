@@ -65,7 +65,7 @@ mod traits;
 
 use std::{
     collections::HashSet,
-    fs::create_dir_all,
+    fs::{create_dir_all, remove_file},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -98,6 +98,198 @@ impl Database {
     // END OF BUILDER METHODS
     // ----------------------
 
+    /// Deletes a record from a table
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - ID of the record to delete
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToRemoveFile`]: Failed to remove file
+    pub fn delete<T>(&self, id: &Id<T>) -> Result<()>
+    where
+        T: AsTable,
+    {
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        // TODO restrict deleting record if other tables have foreign keys pointing to it
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let file_path = path.join(table_name).join(id);
+
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        remove_file(&file_path).context(DBError::FailedToRemoveFile(file_path))?;
+
+        Ok(())
+    }
+
+    /// Gets a record from a table
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - ID of the record to get
+    ///
+    /// ## Returns
+    ///
+    /// A record of type `T` where `T` implements [`AsTable`]
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToDeserializeFile`]: Failed to deserialize file
+    pub fn get<T>(&self, id: &Id<T>) -> Result<T>
+    where
+        T: AsTable + for<'de> Deserialize<'de>,
+    {
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+        let file_path = table_dir_path.join(id);
+
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.read();
+        let mut record: T =
+            deserialize_file(&file_path).context(DBError::FailedToDeserializeFile(file_path))?;
+
+        record.set_id(id.clone());
+
+        Ok(record)
+    }
+
+    /// Inserts a record into the table and returns the ID
+    ///
+    /// ID will be generated automatically
+    ///
+    /// ## Arguments
+    ///
+    /// * `record` - The record to insert
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordAlreadyExists`]: Record already exists
+    /// * [`DBError::ForeignKeyViolation`]: Referenced record does not exist
+    /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
+    /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    pub fn insert<T>(&self, record: &T) -> Result<Id<T>>
+    where
+        T: AsTable + Serialize,
+    {
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = T::name();
+        if let Some(id) = &record.get_id().value {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.clone(),
+            }
+            .into());
+        }
+
+        for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
+            let fk_id_option = get_fk_id(record);
+            if let Some(fk_id_str) = fk_id_option {
+                if !self.record_exists(ref_table, fk_id_str) {
+                    return Err(DBError::ForeignKeyViolation {
+                        field: field_name.to_string(),
+                        table: ref_table.to_string(),
+                        id: fk_id_option.unwrap_or("").to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(DBError::InvalidForeignKey {
+                    field: field_name.to_string(),
+                    table: ref_table.to_string(),
+                    id: fk_id_option.unwrap_or("").to_string(),
+                }
+                .into());
+            }
+        }
+
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+
+        create_dir_all(&table_dir_path)
+            .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
+
+        let id = Id::generate();
+        let file_path = table_dir_path.join(&id);
+
+        if file_path.is_file() {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))?;
+
+        Ok(id)
+    }
+
     /// Returns the metadata of the database
     fn metadata(&self) -> Result<Option<Metadata>> {
         let path_guard = self.path.read();
@@ -127,6 +319,83 @@ impl Database {
         let path = self.path.read();
         let file_path = path.join(table_name).join(id_str);
         file_path.is_file()
+    }
+
+    /// Updates a record in the table
+    ///
+    /// ## Arguments
+    ///
+    /// * `db` - The database instance
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::ForeignKeyViolation`]: Referenced record does not exist
+    /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    pub fn update<T>(&self, record: &T) -> Result<()>
+    where
+        T: AsTable + Serialize,
+    {
+        let id = record.get_id();
+
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
+            let fk_id_option = get_fk_id(record);
+            if let Some(fk_id_str) = fk_id_option {
+                if !self.record_exists(ref_table, fk_id_str) {
+                    return Err(DBError::ForeignKeyViolation {
+                        field: field_name.to_string(),
+                        table: ref_table.to_string(),
+                        id: fk_id_option.unwrap_or("").to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(DBError::InvalidForeignKey {
+                    field: field_name.to_string(),
+                    table: ref_table.to_string(),
+                    id: fk_id_option.unwrap_or("").to_string(),
+                }
+                .into());
+            }
+        }
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+
+        create_dir_all(&table_dir_path)
+            .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
+
+        let file_path = table_dir_path.join(id);
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))
     }
 
     /// Writes the metadata of the database

@@ -10,7 +10,7 @@
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
 use divan::{Bencher, black_box};
-use minidb::{AsTable, Database, Id, Table};
+use minidb::{Database, Id, Table};
 use serde::{Deserialize, Serialize};
 use tempfile::tempdir;
 
@@ -58,7 +58,7 @@ fn insert_one(b: Bencher) {
     };
 
     b.bench(|| {
-        let id = p.insert(black_box(&db)).expect("Failed to insert person");
+        let id = db.insert(black_box(&p)).expect("Failed to insert person");
         black_box(id);
     });
 }
@@ -81,7 +81,7 @@ fn insert_1000(b: Bencher) {
 
     b.bench(|| {
         for _ in 0..1000 {
-            let id = p.insert(black_box(&db)).expect("Failed to insert person");
+            let id = db.insert(black_box(&p)).expect("Failed to insert person");
             black_box(id);
         }
         black_box(());
@@ -104,13 +104,13 @@ fn update(b: Bencher) {
             name: "John Doe".into(),
             age: 31,
         };
-        let id = p.insert(&db).expect("Failed to insert person");
+        let id = db.insert(&p).expect("Failed to insert person");
         p.id = id;
         p.age += 1;
         p
     })
     .bench_values(|p| {
-        p.update(black_box(&db)).expect("Failed to update person");
+        db.update(black_box(&p)).expect("Failed to update person");
         black_box(());
     });
 }
@@ -131,10 +131,10 @@ fn get(b: Bencher) {
         age: 31,
     };
 
-    let id = p.insert(&db).expect("Failed to insert person");
+    let id = db.insert(&p).expect("Failed to insert person");
 
     b.bench(|| {
-        let p2 = Person::get(black_box(&db), black_box(&id)).expect("Failed to get person");
+        let p2 = db.get(black_box(&id)).expect("Failed to get person");
         black_box(p2);
     });
 }
@@ -155,9 +155,9 @@ fn delete(b: Bencher) {
         age: 31,
     };
 
-    b.with_inputs(|| p.insert(&db).expect("Failed to insert person"))
+    b.with_inputs(|| db.insert(&p).expect("Failed to insert person"))
         .bench_values(|id| {
-            Person::delete(black_box(&db), black_box(&id)).expect("Failed to delete person");
+            db.delete(black_box(&id)).expect("Failed to delete person");
             black_box(());
         });
 }

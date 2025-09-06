@@ -15,35 +15,35 @@
 //! Timer precision: 100 ns
 //! database        fastest       │ slowest       │ median        │ mean          │ samples │ iters
 //! ├─ delete                     │               │               │               │         │
-//! │  ├─ t=1       202 µs        │ 579.3 µs      │ 248.9 µs      │ 272.1 µs      │ 100     │ 100
-//! │  ├─ t=4       393.4 µs      │ 1.578 ms      │ 781.3 µs      │ 795.1 µs      │ 100     │ 100
-//! │  ├─ t=8       726.6 µs      │ 4.033 ms      │ 1.559 ms      │ 1.721 ms      │ 104     │ 104
-//! │  ╰─ t=16      1.502 ms      │ 5.455 ms      │ 2.978 ms      │ 3.035 ms      │ 112     │ 112
+//! │  ├─ t=1       198.9 µs      │ 328.4 µs      │ 205.6 µs      │ 215.7 µs      │ 100     │ 100
+//! │  ├─ t=4       395.4 µs      │ 1.012 ms      │ 677.7 µs      │ 664.6 µs      │ 100     │ 100
+//! │  ├─ t=8       731.8 µs      │ 1.8 ms        │ 1.245 ms      │ 1.249 ms      │ 104     │ 104
+//! │  ╰─ t=16      1.426 ms      │ 3.917 ms      │ 2.487 ms      │ 2.482 ms      │ 112     │ 112
 //! ├─ get                        │               │               │               │         │
-//! │  ├─ t=1       135.1 µs      │ 805.3 µs      │ 169.1 µs      │ 185.8 µs      │ 100     │ 100
-//! │  ├─ t=4       390.5 µs      │ 954.4 µs      │ 547.1 µs      │ 571.8 µs      │ 100     │ 100
-//! │  ├─ t=8       515.4 µs      │ 3.133 ms      │ 905.2 µs      │ 1.095 ms      │ 104     │ 104
-//! │  ╰─ t=16      592.2 µs      │ 2.76 ms       │ 2.055 ms      │ 2.063 ms      │ 112     │ 112
+//! │  ├─ t=1       132.7 µs      │ 453.2 µs      │ 134.9 µs      │ 139.7 µs      │ 100     │ 100
+//! │  ├─ t=4       305 µs        │ 757.5 µs      │ 450.1 µs      │ 469.6 µs      │ 100     │ 100
+//! │  ├─ t=8       548.5 µs      │ 1.226 ms      │ 968.2 µs      │ 963.9 µs      │ 104     │ 104
+//! │  ╰─ t=16      994.7 µs      │ 2.54 ms       │ 2.027 ms      │ 1.958 ms      │ 112     │ 112
 //! ├─ insert_1000                │               │               │               │         │
-//! │  ├─ t=1       800.2 ms      │ 993.8 ms      │ 900.7 ms      │ 897.2 ms      │ 100     │ 100
-//! │  ├─ t=4       3.437 s       │ 4.123 s       │ 3.797 s       │ 3.804 s       │ 100     │ 100
-//! │  ├─ t=8       7.047 s       │ 8.154 s       │ 7.507 s       │ 7.519 s       │ 104     │ 104
-//! │  ╰─ t=16      13.85 s       │ 15.7 s        │ 14.77 s       │ 14.74 s       │ 112     │ 112
+//! │  ├─ t=1       680.9 ms      │ 774.4 ms      │ 711.7 ms      │ 714.9 ms      │ 100     │ 100
+//! │  ├─ t=4       2.809 s       │ 3.009 s       │ 2.9 s         │ 2.894 s       │ 100     │ 100
+//! │  ├─ t=8       5.469 s       │ 5.923 s       │ 5.602 s       │ 5.635 s       │ 104     │ 104
+//! │  ╰─ t=16      11.12 s       │ 11.82 s       │ 11.28 s       │ 11.33 s       │ 112     │ 112
 //! ├─ insert_one                 │               │               │               │         │
-//! │  ├─ t=1       617.4 µs      │ 2.26 ms       │ 832.7 µs      │ 867.5 µs      │ 100     │ 100
-//! │  ├─ t=4       1.067 ms      │ 8.643 ms      │ 2.603 ms      │ 2.8 ms        │ 100     │ 100
-//! │  ├─ t=8       1.799 ms      │ 8.792 ms      │ 4.47 ms       │ 4.514 ms      │ 104     │ 104
-//! │  ╰─ t=16      3.708 ms      │ 15.63 ms      │ 9.274 ms      │ 9.204 ms      │ 112     │ 112
+//! │  ├─ t=1       665.3 µs      │ 1.416 ms      │ 806.8 µs      │ 829.6 µs      │ 100     │ 100
+//! │  ├─ t=4       975.5 µs      │ 3.499 ms      │ 2.1 ms        │ 2.059 ms      │ 100     │ 100
+//! │  ├─ t=8       1.484 ms      │ 6.246 ms      │ 3.726 ms      │ 3.681 ms      │ 104     │ 104
+//! │  ╰─ t=16      2.501 ms      │ 11.67 ms      │ 6.988 ms      │ 7.021 ms      │ 112     │ 112
 //! ├─ new                        │               │               │               │         │
-//! │  ├─ t=1       1.198 ms      │ 2.589 ms      │ 1.631 ms      │ 1.638 ms      │ 100     │ 100
-//! │  ├─ t=4       2.639 ms      │ 4.124 ms      │ 3.289 ms      │ 3.306 ms      │ 100     │ 100
-//! │  ├─ t=8       4.06 ms       │ 6.823 ms      │ 5.713 ms      │ 5.709 ms      │ 104     │ 104
-//! │  ╰─ t=16      6.969 ms      │ 22.62 ms      │ 10.51 ms      │ 11.71 ms      │ 112     │ 112
+//! │  ├─ t=1       1.198 ms      │ 1.609 ms      │ 1.247 ms      │ 1.279 ms      │ 100     │ 100
+//! │  ├─ t=4       2.273 ms      │ 3.24 ms       │ 2.737 ms      │ 2.746 ms      │ 100     │ 100
+//! │  ├─ t=8       3.839 ms      │ 5.59 ms       │ 4.698 ms      │ 4.684 ms      │ 104     │ 104
+//! │  ╰─ t=16      5.641 ms      │ 10.07 ms      │ 8.765 ms      │ 8.651 ms      │ 112     │ 112
 //! ╰─ update                     │               │               │               │         │
-//!    ├─ t=1       720.6 µs      │ 2.704 ms      │ 1.003 ms      │ 1.043 ms      │ 100     │ 100
-//!    ├─ t=4       1.283 ms      │ 20.63 ms      │ 2.659 ms      │ 2.859 ms      │ 100     │ 100
-//!    ├─ t=8       1.568 ms      │ 9.063 ms      │ 4.801 ms      │ 4.883 ms      │ 104     │ 104
-//!    ╰─ t=16      3.184 ms      │ 21.92 ms      │ 10.22 ms      │ 10.52 ms      │ 112     │ 112
+//!    ├─ t=1       712.1 µs      │ 1.26 ms       │ 811.7 µs      │ 854.4 µs      │ 100     │ 100
+//!    ├─ t=4       1.146 ms      │ 3.856 ms      │ 2.31 ms       │ 2.292 ms      │ 100     │ 100
+//!    ├─ t=8       1.484 ms      │ 7.182 ms      │ 3.729 ms      │ 3.833 ms      │ 104     │ 104
+//!    ╰─ t=16      2.543 ms      │ 16.55 ms      │ 7.873 ms      │ 8.169 ms      │ 112     │ 112
 //! ```
 
 // Copyright (c) 2025, DarkCeptor44
@@ -65,7 +65,7 @@ mod traits;
 
 use std::{
     collections::HashSet,
-    fs::create_dir_all,
+    fs::{create_dir_all, remove_file},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -98,6 +98,198 @@ impl Database {
     // END OF BUILDER METHODS
     // ----------------------
 
+    /// Deletes a record from a table
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - ID of the record to delete
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToRemoveFile`]: Failed to remove file
+    pub fn delete<T>(&self, id: &Id<T>) -> Result<()>
+    where
+        T: AsTable,
+    {
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        // TODO restrict deleting record if other tables have foreign keys pointing to it
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let file_path = path.join(table_name).join(id);
+
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        remove_file(&file_path).context(DBError::FailedToRemoveFile(file_path))?;
+
+        Ok(())
+    }
+
+    /// Gets a record from a table
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - ID of the record to get
+    ///
+    /// ## Returns
+    ///
+    /// A record of type `T` where `T` implements [`AsTable`]
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToDeserializeFile`]: Failed to deserialize file
+    pub fn get<T>(&self, id: &Id<T>) -> Result<T>
+    where
+        T: AsTable + for<'de> Deserialize<'de>,
+    {
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+        let file_path = table_dir_path.join(id);
+
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.read();
+        let mut record: T =
+            deserialize_file(&file_path).context(DBError::FailedToDeserializeFile(file_path))?;
+
+        record.set_id(id.clone());
+
+        Ok(record)
+    }
+
+    /// Inserts a record into the table and returns the ID
+    ///
+    /// ID will be generated automatically
+    ///
+    /// ## Arguments
+    ///
+    /// * `record` - The record to insert
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::RecordAlreadyExists`]: Record already exists
+    /// * [`DBError::ForeignKeyViolation`]: Referenced record does not exist
+    /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
+    /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    pub fn insert<T>(&self, record: &T) -> Result<Id<T>>
+    where
+        T: AsTable + Serialize,
+    {
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        let table_name = T::name();
+        if let Some(id) = &record.get_id().value {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.clone(),
+            }
+            .into());
+        }
+
+        for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
+            let fk_id_option = get_fk_id(record);
+            if let Some(fk_id_str) = fk_id_option {
+                if !self.record_exists(ref_table, fk_id_str) {
+                    return Err(DBError::ForeignKeyViolation {
+                        field: field_name.to_string(),
+                        table: ref_table.to_string(),
+                        id: fk_id_option.unwrap_or("").to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(DBError::InvalidForeignKey {
+                    field: field_name.to_string(),
+                    table: ref_table.to_string(),
+                    id: fk_id_option.unwrap_or("").to_string(),
+                }
+                .into());
+            }
+        }
+
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+
+        create_dir_all(&table_dir_path)
+            .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
+
+        let id = Id::generate();
+        let file_path = table_dir_path.join(&id);
+
+        if file_path.is_file() {
+            return Err(DBError::RecordAlreadyExists {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))?;
+
+        Ok(id)
+    }
+
     /// Returns the metadata of the database
     fn metadata(&self) -> Result<Option<Metadata>> {
         let path_guard = self.path.read();
@@ -127,6 +319,83 @@ impl Database {
         let path = self.path.read();
         let file_path = path.join(table_name).join(id_str);
         file_path.is_file()
+    }
+
+    /// Updates a record in the table
+    ///
+    /// ## Arguments
+    ///
+    /// * `db` - The database instance
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::InvalidKey`]: Invalid key
+    /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
+    /// * [`DBError::NoMetadata`]: Metadata not found
+    /// * [`DBError::NoTables`]: No tables were found in the database
+    /// * [`DBError::ForeignKeyViolation`]: Referenced record does not exist
+    /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
+    /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
+    /// * [`DBError::RecordNotFound`]: Record not found
+    /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    pub fn update<T>(&self, record: &T) -> Result<()>
+    where
+        T: AsTable + Serialize,
+    {
+        let id = record.get_id();
+
+        if id.is_none() {
+            return Err(DBError::InvalidKey(id.to_string()).into());
+        }
+
+        let meta = self
+            .metadata()
+            .context(DBError::FailedToReadMetadata)?
+            .context(DBError::NoMetadata)?;
+
+        if meta.tables.is_empty() {
+            return Err(DBError::NoTables.into());
+        }
+
+        for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
+            let fk_id_option = get_fk_id(record);
+            if let Some(fk_id_str) = fk_id_option {
+                if !self.record_exists(ref_table, fk_id_str) {
+                    return Err(DBError::ForeignKeyViolation {
+                        field: field_name.to_string(),
+                        table: ref_table.to_string(),
+                        id: fk_id_option.unwrap_or("").to_string(),
+                    }
+                    .into());
+                }
+            } else {
+                return Err(DBError::InvalidForeignKey {
+                    field: field_name.to_string(),
+                    table: ref_table.to_string(),
+                    id: fk_id_option.unwrap_or("").to_string(),
+                }
+                .into());
+            }
+        }
+
+        let table_name = T::name();
+        let path = self.path.read();
+        let table_dir_path = path.join(table_name);
+
+        create_dir_all(&table_dir_path)
+            .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
+
+        let file_path = table_dir_path.join(id);
+        if !file_path.is_file() {
+            return Err(DBError::RecordNotFound {
+                table: table_name.to_string(),
+                id: id.to_string(),
+            }
+            .into());
+        }
+
+        let _lock = self.file_lock.write();
+        serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))
     }
 
     /// Writes the metadata of the database

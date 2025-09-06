@@ -51,7 +51,7 @@ fn test_database_add_record() {
         name: String::from("John Doe"),
         age: 31,
     };
-    let id = p.insert(&dbg!(db)).expect("Failed to insert person");
+    let id = db.insert(dbg!(&p)).expect("Failed to insert person");
     p.id = id;
 
     let str = read_from_file(temp_path.join("person").join(&p.id)).expect("Failed to read file");
@@ -74,10 +74,10 @@ fn test_database_get_record() {
         age: 31,
     };
 
-    let id = p.insert(dbg!(&db)).expect("Failed to insert person");
+    let id = db.insert(dbg!(&p)).expect("Failed to insert person");
     p.id = id;
 
-    let p2 = Person::get(&db, dbg!(&p.id)).expect("Failed to get person");
+    let p2 = db.get(dbg!(&p.id)).expect("Failed to get person");
     assert_eq!(p2, p);
 }
 
@@ -97,13 +97,13 @@ fn test_database_update_record() {
         age: 31,
     };
 
-    let id = p.insert(dbg!(&db)).expect("Failed to insert person");
+    let id = db.insert(dbg!(&p)).expect("Failed to insert person");
     p.id = id;
 
     p.age += 1;
-    p.update(&db).expect("Failed to update person");
+    db.update(&p).expect("Failed to update person");
 
-    let p2 = Person::get(&db, &p.id).expect("Failed to get person");
+    let p2 = db.get(dbg!(&p.id)).expect("Failed to get person");
     assert_eq!(p2, p);
 }
 
@@ -123,11 +123,10 @@ fn test_database_delete_record() {
         age: 31,
     };
 
-    let id = p.insert(dbg!(&db)).expect("Failed to insert person");
+    let id = db.insert(dbg!(&p)).expect("Failed to insert person");
+    db.delete(dbg!(&id)).expect("Failed to delete person");
 
-    Person::delete(&db, dbg!(&id)).expect("Failed to delete person");
-
-    assert!(Person::get(&db, &id).is_err());
+    assert!(db.get(&id).is_err());
 }
 
 #[test]
@@ -193,7 +192,7 @@ fn test_database_relationship() {
 
     assert_eq!(Order::get_foreign_keys().len(), 1);
 
-    p.id = p.insert(&db).expect("Failed to insert person");
+    p.id = db.insert(&p).expect("Failed to insert person");
     dbg!(&p);
 
     let mut o = Order {
@@ -201,17 +200,17 @@ fn test_database_relationship() {
         customer_id: p.id.clone(),
     };
 
-    o.id = o.insert(&db).expect("Failed to insert order");
+    o.id = db.insert(&o).expect("Failed to insert order");
     dbg!(&o);
 
     assert_eq!(o.customer_id, p.id);
 
     p.age = 32;
-    p.update(&db).expect("Failed to update person");
+    db.update(&p).expect("Failed to update person");
 
-    let p2 = Person::get(&db, &p.id).expect("Failed to get person");
+    let p2 = db.get(&p.id).expect("Failed to get person");
     assert_eq!(p2, p);
 
-    Order::delete(&db, &o.id).expect("Failed to delete order");
-    Person::delete(&db, &p.id).expect("Failed to delete person");
+    db.delete(&o.id).expect("Failed to delete order");
+    db.delete(&p.id).expect("Failed to delete person");
 }

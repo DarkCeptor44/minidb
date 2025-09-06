@@ -65,6 +65,7 @@ mod traits;
 
 use std::{
     collections::HashSet,
+    fmt::{Debug, Display},
     fs::{create_dir_all, remove_file},
     path::{Path, PathBuf},
     sync::Arc,
@@ -72,9 +73,10 @@ use std::{
 
 pub use errors::DBError;
 pub use minidb_macros::Table;
-pub use traits::{AsTable, Id};
+pub use traits::AsTable;
 
 use anyhow::{Context, Result};
+use cuid2::slug;
 use minidb_utils::{PathExt, deserialize_file, serialize_file};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -539,4 +541,104 @@ impl DatabaseBuilder {
 #[derive(Debug, Serialize, Deserialize)]
 struct Metadata {
     tables: HashSet<String>,
+}
+
+/// Represents the ID of a record
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Id<T> {
+    /// The underlying value
+    pub value: Option<String>,
+
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> Clone for Id<T> {
+    fn clone(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<S, T> From<S> for Id<T>
+where
+    S: AsRef<str>,
+{
+    fn from(value: S) -> Self {
+        let value = value.as_ref().trim();
+        if value.is_empty() {
+            Id::default()
+        } else {
+            Id::with_value(Some(value.to_string()))
+        }
+    }
+}
+
+impl<T> AsRef<Path> for Id<T> {
+    fn as_ref(&self) -> &Path {
+        match self.value {
+            Some(ref s) => Path::new(s),
+            None => Path::new(""),
+        }
+    }
+}
+
+impl<T> Default for Id<T> {
+    fn default() -> Self {
+        Self {
+            value: None,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Debug for Id<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.value)
+    }
+}
+
+impl<T> Display for Id<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.value {
+            Some(ref s) => write!(f, "{s}"),
+            None => write!(f, ""),
+        }
+    }
+}
+
+impl<T> Id<T> {
+    /// Creates a new ID with [None]
+    #[must_use]
+    pub fn new() -> Self {
+        Self::with_value(None)
+    }
+
+    /// Creates a new ID with a [Option]
+    #[must_use]
+    pub fn with_value(value: Option<String>) -> Self {
+        Self {
+            value,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Generates a new ID
+    #[must_use]
+    pub fn generate() -> Self {
+        Self::with_value(Some(slug()))
+    }
+
+    /// Returns `true` if the ID is [`Some`]
+    #[must_use]
+    pub const fn is_some(&self) -> bool {
+        self.value.is_some()
+    }
+
+    /// Returns `true` if the ID is [`None`]
+    #[must_use]
+    pub const fn is_none(&self) -> bool {
+        self.value.is_none()
+    }
 }

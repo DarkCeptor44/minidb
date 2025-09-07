@@ -13,7 +13,7 @@ Minimalistic file-based database written in Rust
 
 ## Why not async
 
-The database was initially built without async, then I thought about it and started writing async versions of each function in [minidb-utils](../minidb-utils/README.md) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, the assumption is that the overhead wouldn't be worth it, and the API would be more complex, for example adding a table to the database instance would go from:
+The database was initially built without async, then I thought about it and started writing async versions of each function in [minidb-utils](https://docs.rs/minidb-utils) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, the assumption is that the overhead wouldn't be worth it, and the API would be more complex, for example adding a table to the database instance would go from:
 
 ```rust
 let db = Database::builder().path(path).table::<Person>().build().unwrap();

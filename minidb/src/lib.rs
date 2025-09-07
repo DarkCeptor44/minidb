@@ -592,8 +592,8 @@ impl DatabaseBuilder {
         create_dir_all(&path).context(DBError::FailedToCreateDatabase(path.clone()))?;
 
         let db = Database {
-            path: Arc::new(RwLock::new(path.clone())),
             file_lock: Arc::new(RwLock::new(())),
+            path: Arc::new(RwLock::new(path.clone())),
         };
         let meta =
             if let Some(meta) = Database::metadata(&db).context(DBError::FailedToReadMetadata)? {

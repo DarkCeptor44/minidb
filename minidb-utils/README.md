@@ -1,6 +1,6 @@
 # minidb-utils
 
-Utilities and fundamental functions for minidb. To be able to click on everything highlighted go to the [docs](https://docs.rs/crate/minidb-utils)
+Utilities and fundamental functions for minidb. To be able to click on everything highlighted go to the [docs](https://docs.rs/minidb-utils)
 
 ## Traits
 

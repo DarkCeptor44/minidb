@@ -4,9 +4,9 @@ Minimalistic file-based database written in Rust
 
 ## Crates in this workspace
 
-* **[minidb](./minidb/README.md)**: Main crate
+* **[minidb](./minidb/README.md)**: Main crate ([docs.rs](https://docs.rs/minidb))
 * **[minidb-macros](./minidb-macros/README.md)**: Contains procedural macros for defining the tables
-* **[minidb-utils](./minidb-utils/README.md)**: Contains utilities and fundamental functions for minidb
+* **[minidb-utils](./minidb-utils/README.md)**: Contains utilities and fundamental functions for minidb ([docs.rs](https://docs.rs/minidb-utils))
 
 ## Audits
 

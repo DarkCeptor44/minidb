@@ -215,3 +215,23 @@ fn test_database_relationship() {
     db.delete(&o.id).expect("Failed to delete order");
     db.delete(&p.id).expect("Failed to delete person");
 }
+
+#[test]
+fn test_database_exists() {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_path = temp_dir.path();
+    let db = Database::builder()
+        .path(temp_path)
+        .table::<Person>()
+        .build()
+        .expect("Failed to create database");
+
+    let p = Person {
+        id: Id::new(),
+        name: String::from("John Doe"),
+        age: 31,
+    };
+
+    let id = db.insert(dbg!(&p)).expect("Failed to insert person");
+    assert!(db.exists(&id));
+}

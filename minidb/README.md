@@ -6,7 +6,7 @@ Minimalistic file-based database written in Rust
 
 * File-based, this means the tables are sub-directories and the records are files
 * Uses [bitcode](https://crates.io/crates/bitcode) as the binary format to store the data
-* Uses [cuid2](https://crates.io/crates/cuid2) slugs for record IDS
+* Uses [cuid2](https://crates.io/crates/cuid2) slugs for record IDs
 * Easy table definition with procedural macros
 * Built around poison-free read-write locks to be thread-safe
 * Relies on [serde](https://crates.io/crates/serde) for serialization and deserialization of the tables

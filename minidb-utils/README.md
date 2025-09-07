@@ -19,11 +19,11 @@ Utilities and fundamental functions for minidb. To be able to click on everythin
 
 ### Cryptographic
 
-* `derive_key`: Derive a key from a password and a salt using [Argon2id](argon2)
+* `derive_key`: Derive a key from a password and a salt using [Argon2id](https://en.wikipedia.org/wiki/Argon2)
 
 * `generate_salt`: Generate a random salt of 16 bytes
-* `hash_password`: Hash a password using [Argon2id](argon2)
-* `verify_password`: Verify a password using [Argon2id](argon2)
+* `hash_password`: Hash a password using [Argon2id](https://en.wikipedia.org/wiki/Argon2)
+* `verify_password`: Verify a password using [Argon2id](https://en.wikipedia.org/wiki/Argon2)
 
 ### File related
 
@@ -108,7 +108,7 @@ The tuple in [`derive_key` is `(memory_cost, iterations, parallelism)`, where:
 
 *Memory cost of 1024 is benchmarked but is not recommended
 
-* 19 MiB is recommended with `T` of 2 or 3 and `P` of 1 and is the default of [Argon2](argon2)
+* 19 MiB is recommended with `T` of 2 or 3 and `P` of 1 and is the default of [Argon2](https://en.wikipedia.org/wiki/Argon2)
 * 64 MiB with `T` of 3 and `P` of 2 is used by [Bitwarden](https://bitwarden.com)
 
 ```text

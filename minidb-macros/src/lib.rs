@@ -123,7 +123,7 @@ impl MiniDBFieldAttributes {
 #[allow(clippy::too_many_lines)]
 pub fn table_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let struct_name = input.ident;
+    let struct_name = &input.ident;
     let struct_generics = &input.generics;
     let (impl_generics, ty_generics, where_clause) = struct_generics.split_for_impl();
 
@@ -149,8 +149,8 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
             quote!(#ident)
         }
     };
-    let fields = match input.data {
-        Data::Struct(s) => s.fields,
+    let fields = match &input.data {
+        Data::Struct(s) => &s.fields,
         Data::Enum(e) => {
             return Error::new_spanned(e.enum_token, "Table derive macro only supports structs")
                 .to_compile_error()
@@ -167,7 +167,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
     let mut num_keys_fields = 0;
     let mut foreign_key_entries = Vec::new();
 
-    for field in &fields {
+    for field in fields {
         let Some(ident) = field.ident.as_ref() else {
             return Error::new_spanned(field, "Struct field must have a name")
                 .to_compile_error()
@@ -219,7 +219,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
         .into();
     };
 
-    let out = quote! {
+    let as_table_impl = quote! {
         impl #crate_path::AsTable for #struct_name #impl_generics #ty_generics #where_clause {
             fn name() -> &'static str {
                 #table_name
@@ -239,6 +239,10 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
                 ]
             }
         }
+    };
+
+    let out = quote! {
+        #as_table_impl
     };
 
     // return Error::new_spanned(struct_name, out)

@@ -6,13 +6,11 @@ This crate provides procedural macros for the `minidb` crate
 
 Derives `AsTable` for a struct
 
-### Attributes
-
-#### Struct
+### Struct Attributes
 
 * `#[minidb(name = "custom_name")]` - Sets a different name for the struct/table. Names get converted to `snake_case`
 
-#### Field
+### Field Attributes
 
 * `#[key]` - Sets the field as a primary key
 * `#[foreign_key]` - Sets the field as a foreign key to the referenced table's primary key, for example:

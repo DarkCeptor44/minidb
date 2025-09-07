@@ -327,7 +327,7 @@ impl Database {
     ///
     /// ## Arguments
     ///
-    /// * `db` - The database instance
+    /// * `record` - The record to update
     ///
     /// ## Errors
     ///

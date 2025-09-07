@@ -25,7 +25,11 @@ use serde::{Deserialize, Serialize};
 /// ```rust
 /// use minidb_utils::ArgonParams;
 ///
-/// let params = ArgonParams::new().m_cost(19 * 1024).t_cost(3).p_cost(2).output_len(32);
+/// let params = ArgonParams::new()
+///         .m_cost(19 *1024)
+///         .t_cost(2)
+///         .p_cost(1)
+///         .output_len(32);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArgonParams {

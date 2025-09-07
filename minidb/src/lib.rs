@@ -334,7 +334,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.record_exists(ref_table, fk_id_str) {
+                if !self.exists_impl(ref_table, fk_id_str) {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),
@@ -399,10 +399,27 @@ impl Database {
     }
 
     /// Checks if a record exists in the database
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The ID of the record to check
+    ///
+    /// ## Returns
+    ///
+    /// `true` if the record exists, `false` otherwise
     #[must_use]
-    pub fn record_exists(&self, table_name: &str, id_str: &str) -> bool {
+    pub fn exists<I, T>(&self, id: I) -> bool
+    where
+        I: AsRef<Id<T>>,
+        T: AsTable,
+    {
+        self.exists_impl(T::name(), &id.as_ref().to_string())
+    }
+
+    /// Checks if a record exists in the database
+    fn exists_impl(&self, table_name: &str, id: &str) -> bool {
         let path = self.path.read();
-        let file_path = path.join(table_name).join(id_str);
+        let file_path = path.join(table_name).join(id);
         file_path.is_file()
     }
 
@@ -445,7 +462,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.record_exists(ref_table, fk_id_str) {
+                if !self.exists_impl(ref_table, fk_id_str) {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),

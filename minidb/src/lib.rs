@@ -458,12 +458,11 @@ impl Database {
     ///
     /// `true` if the record exists, `false` otherwise
     #[must_use]
-    pub fn exists<I, T>(&self, id: I) -> bool
+    pub fn exists<T>(&self, id: &Id<T>) -> bool
     where
-        I: AsRef<Id<T>>,
         T: AsTable,
     {
-        self.exists_impl(T::name(), &id.as_ref().to_string())
+        self.exists_impl(T::name(), &id.to_string())
     }
 
     /// Checks if a record exists in the database

@@ -4,12 +4,91 @@
 //!
 //! ## Features
 //!
-//! * File-based
-//! * Thread-safe due to [`parking_lot's`](parking_lot) [`RwLock`]
+//! * File-based, this means the tables are sub-directories and the records are files
+//! * Uses [bitcode](https://crates.io/crates/bitcode) as the binary format to store the data
+//! * Uses [cuid2] slugs for record IDs
+//! * Easy table definition with procedural macros
+//! * Built around poison-free read-write locks to be thread-safe
+//! * Relies on [serde] for serialization and deserialization of the tables
+//!
+//! ## Why not async
+//!
+//! The database was initially built without async, then I thought about it and started writing async versions of each function in [minidb-utils](minidb_utils) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, the assumption is that the overhead wouldn't be worth it, and the API would be more complex, for example adding a table to the database instance would go from:
+//!
+//! ```rust,ignore
+//! let db = Database::builder().path(path).table::<Person>().build().unwrap();
+//! ```
+//!
+//! To:
+//!
+//! ```rust,ignore
+//! let db = Database::builder().path(path).await.table::<Person>().await.build().await.unwrap();
+//! ```
+//!
+//! However, it's not impossible if future benchmarks show enough difference.
+//!
+//! ## MSRV
+//!
+//! The minimum supported Rust version is `1.85.0`. The MSRV might be changed at any time with a minor version bump
+//!
+//! ## Audits
+//!
+//! * From [cargo-audit](https://crates.io/crates/cargo-audit):
+//!
+//! ```text
+//! Crate:     atomic-polyfill
+//! Version:   1.0.3
+//! Warning:   unmaintained
+//! Title:     atomic-polyfill is unmaintained
+//! Date:      2023-07-11
+//! ID:        RUSTSEC-2023-0089
+//! URL:       https://rustsec.org/advisories/RUSTSEC-2023-0089
+//! Dependency tree:
+//! atomic-polyfill 1.0.3
+//! └── heapless 0.7.17
+//!     └── postcard 1.1.3
+//!         └── minidb-utils 0.1.0
+//!             └── minidb 0.1.0
+//!
+//! Crate:     paste
+//! Version:   1.0.15
+//! Warning:   unmaintained
+//! Title:     paste - no longer maintained
+//! Date:      2024-10-07
+//! ID:        RUSTSEC-2024-0436
+//! URL:       https://rustsec.org/advisories/RUSTSEC-2024-0436
+//! Dependency tree:
+//! paste 1.0.15
+//! ├── rmp 0.8.14
+//! │   └── rmp-serde 1.3.0
+//! │       └── minidb-utils 0.1.0
+//! │           └── minidb 0.1.0
+//! └── minidb 0.1.0
+//!
+//! Crate:     serde_cbor
+//! Version:   0.11.2
+//! Warning:   unmaintained
+//! Title:     serde_cbor is unmaintained
+//! Date:      2021-08-15
+//! ID:        RUSTSEC-2021-0127
+//! URL:       https://rustsec.org/advisories/RUSTSEC-2021-0127
+//! Dependency tree:
+//! serde_cbor 0.11.2
+//! └── minidb-utils 0.1.0
+//!     └── minidb 0.1.0
+//!
+//! warning: 3 allowed warnings found
+//! ```
+//!
+//! ## Tests
+//!
+//! The tests can be run with:
+//!
+//! ```bash
+//! cargo test -p minidb
+//! ```
 //!
 //! ## Benchmarks
-//!
-//! ### Database
 //!
 //! ```text
 //! Timer precision: 100 ns
@@ -45,6 +124,10 @@
 //!    ├─ t=8       1.484 ms      │ 7.182 ms      │ 3.729 ms      │ 3.833 ms      │ 104     │ 104
 //!    ╰─ t=16      2.543 ms      │ 16.55 ms      │ 7.873 ms      │ 8.169 ms      │ 112     │ 112
 //! ```
+//!
+//! ## License
+//!
+//! This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html).
 
 // Copyright (c) 2025, DarkCeptor44
 //

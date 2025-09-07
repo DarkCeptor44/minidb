@@ -9,9 +9,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-//! # minidb macros
+//! Dummy documentation block
 //!
-//! This crate provides macros for the `minidb` crate
+//! proc-macro crates don't have generated rustdocs
 
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]
@@ -93,7 +93,7 @@ impl MiniDBFieldAttributes {
 ///
 /// ### Struct
 ///
-/// * `#[minidb(name = "custom_name")]` - Sets a different name for the struct/table. Names get converted to snake case
+/// * `#[minidb(name = "custom_name")]` - Sets a different name for the struct/table. Names get converted to `snake_case`
 ///
 /// ### Field
 ///
@@ -102,7 +102,7 @@ impl MiniDBFieldAttributes {
 ///
 /// ```rust,ignore
 /// #[foreign_key]
-/// customer_id: Id<Person>, // references the primary key of the `Person` table
+/// customer_id: Id<Person>, // references the primary key of the Person table
 /// ```
 ///
 /// ## Example

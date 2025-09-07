@@ -168,8 +168,8 @@ use serde::{Deserialize, Serialize};
 /// Database client
 #[derive(Debug, Clone)]
 pub struct Database {
-    path: Arc<RwLock<PathBuf>>,
     file_lock: Arc<RwLock<()>>,
+    path: Arc<RwLock<PathBuf>>,
 }
 
 impl Database {

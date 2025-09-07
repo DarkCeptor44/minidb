@@ -581,8 +581,10 @@ impl DatabaseBuilder {
     pub fn build(self) -> Result<Database> {
         let path = self.path.ok_or(DBError::NoDatabasePath)?;
 
-        if !path.is_empty()? {
-            return Err(DBError::FolderExists(path.clone()).into());
+        match path.is_empty() {
+            Ok(true) => (),
+            Ok(false) => return Err(DBError::FolderExists(path.clone()).into()),
+            Err(e) => return Err(e),
         }
 
         if self.tables.is_empty() {

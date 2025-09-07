@@ -165,7 +165,27 @@ use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
-/// Database client
+/// A database client
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use minidb::{AsTable, Database, Id, Table};
+///
+/// #[derive(Table)]
+/// struct Person {
+///     #[key]
+///     id: Id<Self>,
+///     name: String,
+///     age: u8,
+/// }
+///
+/// let db = Database::builder()
+///     .path("path/to/db")
+///     .table::<Person>()
+///     .build()
+///     .unwrap();
+/// ```
 #[derive(Debug, Clone)]
 pub struct Database {
     file_lock: Arc<RwLock<()>>,
@@ -197,6 +217,13 @@ impl Database {
     /// * [`DBError::NoTables`]: No tables were found in the database
     /// * [`DBError::RecordNotFound`]: Record not found
     /// * [`DBError::FailedToRemoveFile`]: Failed to remove file
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let id = Id::from("ldakksdlakls");
+    /// db.delete(&id).unwrap();
+    /// ```
     pub fn delete<T>(&self, id: &Id<T>) -> Result<()>
     where
         T: AsTable,
@@ -252,6 +279,15 @@ impl Database {
     /// * [`DBError::NoTables`]: No tables were found in the database
     /// * [`DBError::RecordNotFound`]: Record not found
     /// * [`DBError::FailedToDeserializeFile`]: Failed to deserialize file
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let id = Id::from("alsdklaksa");
+    /// let person = db.get(&id).unwrap();
+    ///
+    /// println!("Person: {:?}", person);
+    /// ```
     pub fn get<T>(&self, id: &Id<T>) -> Result<T>
     where
         T: AsTable + for<'de> Deserialize<'de>,
@@ -309,6 +345,20 @@ impl Database {
     /// * [`DBError::InvalidForeignKey`]: Referenced record does not exist
     /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
     /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let mut person_to_insert = Person {
+    ///     id: Id::new(),
+    ///     name: "John Doe".to_string(),
+    ///     age: 31,
+    /// };
+    /// let id = db.insert(&person_to_insert).unwrap();
+    /// person_to_insert.id = id;
+    ///
+    /// println!("Inserted person: {:?}", person_to_insert);
+    /// ```
     pub fn insert<T>(&self, record: &T) -> Result<Id<T>>
     where
         T: AsTable + Serialize,
@@ -440,6 +490,21 @@ impl Database {
     /// * [`DBError::FailedToCreateTableDir`]: Failed to create table directory
     /// * [`DBError::RecordNotFound`]: Record not found
     /// * [`DBError::FailedToSerializeFile`]: Failed to serialize file
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let mut person = Person {
+    ///     id: Id::from("alskdlasla"),
+    ///     name: "John Doe".to_string(),
+    ///     age: 31,
+    /// };
+    ///
+    /// person.age += 1;
+    /// db.update(&person).unwrap();
+    ///
+    /// println!("Updated person: {:?}", person);
+    /// ```
     pub fn update<T>(&self, record: &T) -> Result<()>
     where
         T: AsTable + Serialize,

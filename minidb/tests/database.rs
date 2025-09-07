@@ -54,7 +54,8 @@ fn test_database_add_record() {
     let id = db.insert(dbg!(&p)).expect("Failed to insert person");
     p.id = id;
 
-    let str = read_from_file(temp_path.join("person").join(&p.id)).expect("Failed to read file");
+    let str = read_from_file(temp_path.join("person").join(p.id.to_string()))
+        .expect("Failed to read file");
     assert_eq!(str, format!("\0\u{8}John Doe\u{1f}"));
 }
 

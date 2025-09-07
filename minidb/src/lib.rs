@@ -218,7 +218,7 @@ impl Database {
 
         let table_name = T::name();
         let path = self.path.read();
-        let file_path = path.join(table_name).join(id);
+        let file_path = path.join(table_name).join(id.to_string());
 
         if !file_path.is_file() {
             return Err(DBError::RecordNotFound {
@@ -272,7 +272,7 @@ impl Database {
         let table_name = T::name();
         let path = self.path.read();
         let table_dir_path = path.join(table_name);
-        let file_path = table_dir_path.join(id);
+        let file_path = table_dir_path.join(id.to_string());
 
         if !file_path.is_file() {
             return Err(DBError::RecordNotFound {
@@ -359,7 +359,7 @@ impl Database {
             .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
 
         let id = Id::generate();
-        let file_path = table_dir_path.join(&id);
+        let file_path = table_dir_path.join(id.to_string());
 
         if file_path.is_file() {
             return Err(DBError::RecordAlreadyExists {
@@ -470,7 +470,7 @@ impl Database {
         create_dir_all(&table_dir_path)
             .context(DBError::FailedToCreateTableDir(table_dir_path.clone()))?;
 
-        let file_path = table_dir_path.join(id);
+        let file_path = table_dir_path.join(id.to_string());
         if !file_path.is_file() {
             return Err(DBError::RecordNotFound {
                 table: table_name.to_string(),
@@ -656,15 +656,6 @@ where
             Id::default()
         } else {
             Id::with_value(Some(value.to_string()))
-        }
-    }
-}
-
-impl<T> AsRef<Path> for Id<T> {
-    fn as_ref(&self) -> &Path {
-        match self.value {
-            Some(ref s) => Path::new(s),
-            None => Path::new(""),
         }
     }
 }

@@ -220,7 +220,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
     };
 
     let as_table_impl = quote! {
-        impl #crate_path::AsTable for #struct_name #impl_generics #ty_generics #where_clause {
+        impl #impl_generics #crate_path::AsTable for #struct_name #ty_generics #where_clause {
             fn name() -> &'static str {
                 #table_name
             }

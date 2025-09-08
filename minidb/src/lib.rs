@@ -13,7 +13,7 @@
 //!
 //! ## Why not async
 //!
-//! The database was initially built without async, then I thought about it and started writing async versions of each function in [minidb-utils](minidb_utils) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, the assumption is that the overhead wouldn't be worth it, and the API would be more complex, for example adding a table to the database instance would go from:
+//! The database was initially built without async, then I thought about it and wrote async versions of each filesystem-related function in [minidb-utils](minidb_utils) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, I'd assume the overhead from async wouldn't be worth it and the API would be more complex, for example adding a table to the database instance could go from:
 //!
 //! ```rust,ignore
 //! let db = Database::builder().path(path).table::<Person>().build().unwrap();
@@ -30,6 +30,92 @@
 //! ## MSRV
 //!
 //! The minimum supported Rust version is `1.85.0`. The MSRV might be changed at any time with a minor version bump
+//!
+//! ## Installation
+//!
+//! Add the following to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! minidb = "^0.1"
+//! serde = { version = "^1", features = ["derive"] }
+//! ```
+//!
+//! ## Usage
+//!
+//! A minimal example of how to use minidb is provided in `examples/simple.rs`, you can run it with:
+//!
+//! ```bash
+//! cargo run -p minidb --example simple
+//!
+//! # or
+//! cd minidb
+//! cargo run --example simple
+//! ```
+//!
+//! The example code:
+//!
+//! ```rust,ignore
+//! use minidb::{AsTable, Database, Id, Table};
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+//! struct Person {
+//!     #[key]
+//!     id: Id<Self>,
+//!     name: String,
+//!     age: u8,
+//! }
+//!
+//! // 1. Create database
+//! let db = Database::builder()
+//!     .path("path/to/db")
+//!     .table::<Person>()
+//!     .build()
+//!     .unwrap();
+//!
+//! // 2. Insert a new person
+//! let mut person_to_insert = Person {
+//!     id: Id::new(),
+//!     name: "John Doe".to_string(),
+//!     age: 31,
+//! };
+//! let id = db.insert(&person_to_insert).unwrap();
+//! person_to_insert.id = id;
+//! println!("Inserted person: {:?}", person_to_insert);
+//!
+//! // 3. Retrieve person
+//! let person_retrieved = db.get(&person_to_insert.id).unwrap();
+//! assert_eq!(person_retrieved, person_to_insert);
+//! println!(
+//!     "Successfully retrieved and verified person: {:?}",
+//!     person_retrieved
+//! );
+//!
+//! // 4. Update person's age
+//! person_to_insert.age += 1;
+//! db.update(&person_to_insert).unwrap();
+//! println!("Updated person: {:?}", person_to_insert);
+//!
+//! // 5. Retrieve updated person
+//! let person_retrieved = db.get(&person_to_insert.id).unwrap();
+//! assert_eq!(person_retrieved.age, 32);
+//! println!(
+//!     "Successfully retrieved and verified updated person: {:?}",
+//!     person_retrieved
+//! );
+//!
+//! // 6. Delete person
+//! db.delete(&person_to_insert.id).unwrap();
+//! println!("Deleted person");
+//!
+//! // 7. Verify person is deleted
+//! let user_deleted = db.get(&person_to_insert.id);
+//! assert!(user_deleted.is_err());
+//! println!("Verified deletion");
+//!
+//! println!("\nExample completed successfully");
+//! ```
 //!
 //! ## Audits
 //!

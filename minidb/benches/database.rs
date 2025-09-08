@@ -161,3 +161,23 @@ fn delete(b: Bencher) {
             black_box(());
         });
 }
+
+#[divan::bench(threads = T)]
+fn exists(b: Bencher) {
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_path = temp_dir.path();
+    let db = Database::builder()
+        .path(temp_path)
+        .table::<Person>()
+        .build()
+        .expect("Failed to create database");
+
+    let p = Person {
+        id: Id::new(),
+        name: String::from("John Doe"),
+        age: 31,
+    };
+
+    let id = db.insert(&p).expect("Failed to insert person");
+    b.bench(|| black_box(db.exists(black_box(&id))));
+}

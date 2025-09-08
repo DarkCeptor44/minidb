@@ -28,3 +28,7 @@ rand = "^0.9"
 [[bench]]
 name = "database"
 harness = false
+
+[[bench]]
+name = "id"
+harness = false

@@ -176,6 +176,8 @@
 //!
 //! ## Benchmarks
 //!
+//! ### Database
+//!
 //! ```text
 //! Timer precision: 100 ns
 //! database        fastest       │ slowest       │ median        │ mean          │ samples │ iters
@@ -209,6 +211,14 @@
 //!    ├─ t=4       1.146 ms      │ 3.856 ms      │ 2.31 ms       │ 2.292 ms      │ 100     │ 100
 //!    ├─ t=8       1.484 ms      │ 7.182 ms      │ 3.729 ms      │ 3.833 ms      │ 104     │ 104
 //!    ╰─ t=16      2.543 ms      │ 16.55 ms      │ 7.873 ms      │ 8.169 ms      │ 112     │ 112
+//! ```
+//!
+//! ### Id
+//!
+//! ```text
+//! Timer precision: 100 ns
+//! id              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+//! ╰─ id_generate  2.299 µs      │ 160 µs        │ 2.399 µs      │ 3.979 µs      │ 100     │ 100
 //! ```
 //!
 //! ## License

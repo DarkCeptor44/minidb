@@ -9,6 +9,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
+
 use divan::{Bencher, black_box};
 use minidb::{Database, Id, Table};
 use serde::{Deserialize, Serialize};
@@ -16,7 +18,7 @@ use tempfile::tempdir;
 
 const T: &[usize] = &[1, 4, 8, 16];
 
-#[derive(Table, Serialize, Deserialize)]
+#[derive(Table, Serialize, Deserialize, PartialEq, Eq, Hash)]
 struct Person {
     #[key]
     id: Id<Self>,
@@ -41,8 +43,8 @@ fn new(b: Bencher) {
         });
 }
 
-#[divan::bench(threads = T)]
-fn insert_one(b: Bencher) {
+#[divan::bench(threads = T, args = [1, 1000])]
+fn insert(b: Bencher, n: usize) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     let db = Database::builder()
@@ -58,29 +60,7 @@ fn insert_one(b: Bencher) {
     };
 
     b.bench(|| {
-        let id = db.insert(black_box(&p)).expect("Failed to insert person");
-        black_box(id);
-    });
-}
-
-#[divan::bench(threads = T)]
-fn insert_1000(b: Bencher) {
-    let temp_dir = tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-    let db = Database::builder()
-        .path(temp_path)
-        .table::<Person>()
-        .build()
-        .expect("Failed to create database");
-
-    let p = Person {
-        id: Id::new(),
-        name: "John Doe".into(),
-        age: 31,
-    };
-
-    b.bench(|| {
-        for _ in 0..1000 {
+        for _ in 0..n {
             let id = db.insert(black_box(&p)).expect("Failed to insert person");
             black_box(id);
         }
@@ -88,8 +68,8 @@ fn insert_1000(b: Bencher) {
     });
 }
 
-#[divan::bench(threads = T)]
-fn update(b: Bencher) {
+#[divan::bench(threads = T, args = [1, 1000])]
+fn update(b: Bencher, n: usize) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     let db = Database::builder()
@@ -106,17 +86,20 @@ fn update(b: Bencher) {
         };
         let id = db.insert(&p).expect("Failed to insert person");
         p.id = id;
-        p.age += 1;
         p
     })
-    .bench_values(|p| {
-        db.update(black_box(&p)).expect("Failed to update person");
+    .bench_values(|mut p| {
+        for _ in 0..n {
+            p.age += 1;
+            db.update(black_box(&p)).expect("Failed to update person");
+            black_box(());
+        }
         black_box(());
     });
 }
 
-#[divan::bench(threads = T)]
-fn get(b: Bencher) {
+#[divan::bench(threads = T, args = [1, 1000])]
+fn get(b: Bencher, n: usize) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     let db = Database::builder()
@@ -134,13 +117,16 @@ fn get(b: Bencher) {
     let id = db.insert(&p).expect("Failed to insert person");
 
     b.bench(|| {
-        let p2 = db.get(black_box(&id)).expect("Failed to get person");
-        black_box(p2);
+        for _ in 0..n {
+            let p2 = db.get(black_box(&id)).expect("Failed to get person");
+            black_box(p2);
+        }
+        black_box(());
     });
 }
 
-#[divan::bench(threads = T)]
-fn delete(b: Bencher) {
+#[divan::bench(threads = T, args = [1, 1000])]
+fn delete(b: Bencher, n: usize) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     let db = Database::builder()
@@ -155,15 +141,24 @@ fn delete(b: Bencher) {
         age: 31,
     };
 
-    b.with_inputs(|| db.insert(&p).expect("Failed to insert person"))
-        .bench_values(|id| {
-            db.delete(black_box(&id)).expect("Failed to delete person");
+    b.with_inputs(|| {
+        let mut ids = HashSet::new();
+        for _ in 0..n {
+            ids.insert(db.insert(&p).expect("Failed to insert person"));
+        }
+        ids
+    })
+    .bench_values(|ids| {
+        for id in &ids {
+            db.delete(black_box(id)).expect("Failed to delete person");
             black_box(());
-        });
+        }
+        black_box(());
+    });
 }
 
-#[divan::bench(threads = T)]
-fn exists(b: Bencher) {
+#[divan::bench(threads = T, args = [1, 1000])]
+fn exists(b: Bencher, n: usize) {
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
     let db = Database::builder()
@@ -179,5 +174,10 @@ fn exists(b: Bencher) {
     };
 
     let id = db.insert(&p).expect("Failed to insert person");
-    b.bench(|| black_box(db.exists(black_box(&id))));
+    b.bench(|| {
+        for _ in 0..n {
+            black_box(db.exists(black_box(&id)));
+        }
+        black_box(());
+    });
 }

@@ -286,10 +286,15 @@ pub use traits::AsTable;
 
 use anyhow::{Context, Result};
 use cuid2::slug;
-use minidb_utils::{PathExt, deserialize_file, serialize_file};
+use minidb_utils::{
+    ArgonParams, PathExt, derive_key, deserialize_file, generate_salt, serialize_file,
+};
 use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
+
+/// A type alias for a 16-byte array
+type Salt = [u8; 16];
 
 /// A database client
 ///
@@ -314,6 +319,7 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[derive(Debug, Clone)]
 pub struct Database {
+    derived_key: Arc<RwLock<Option<Vec<u8>>>>,
     file_lock: Arc<RwLock<()>>,
     path: Arc<RwLock<PathBuf>>,
 }
@@ -706,6 +712,8 @@ impl Database {
 /// A builder for [Database]
 #[derive(Debug, Default)]
 pub struct DatabaseBuilder {
+    params: Option<ArgonParams>,
+    pass: Option<String>,
     path: Option<PathBuf>,
     tables: HashSet<String>,
 }
@@ -727,6 +735,8 @@ impl DatabaseBuilder {
         let path = path.as_ref();
 
         Self {
+            params: None,
+            pass: None,
             path: Some(path.to_path_buf()),
             tables: HashSet::new(),
         }
@@ -735,6 +745,29 @@ impl DatabaseBuilder {
     // ------------------------
     // START OF BUILDER METHODS
     // ------------------------
+
+    /// Sets the Argon2 parameters to use for hashing
+    ///
+    /// Refer to [`ArgonParams`] for how to build an instance
+    #[must_use]
+    pub fn argon2_params(mut self, params: ArgonParams) -> Self {
+        self.params = Some(params);
+        self
+    }
+
+    /// Adds encryption to the database with the provided password
+    ///
+    /// ## Arguments
+    ///
+    /// * `pass` - The password to encrypt the database with
+    #[must_use]
+    pub fn encryption<S>(mut self, pass: S) -> Self
+    where
+        S: AsRef<str>,
+    {
+        self.pass = Some(pass.as_ref().to_string());
+        self
+    }
 
     /// Sets the database path
     ///
@@ -800,7 +833,9 @@ impl DatabaseBuilder {
 
         create_dir_all(&path).context(DBError::FailedToCreateDatabase(path.clone()))?;
 
+        let params = Arc::new(self.params);
         let db = Database {
+            derived_key: Arc::new(RwLock::new(None)),
             file_lock: Arc::new(RwLock::new(())),
             path: Arc::new(RwLock::new(path.clone())),
         };
@@ -808,8 +843,27 @@ impl DatabaseBuilder {
             if let Some(meta) = Database::metadata(&db).context(DBError::FailedToReadMetadata)? {
                 meta
             } else {
-                let m = Metadata {
+                let mut m = Metadata {
+                    params: (*params).clone(),
+                    salt: if self.pass.is_some() {
+                        Some(generate_salt()?)
+                    } else {
+                        None
+                    },
                     tables: self.tables,
+                };
+
+                let mut key_guard = db.derived_key.write();
+                *key_guard = if let Some(pass) = &self.pass {
+                    if let Some(salt) = &m.salt {
+                        Some(derive_key((*params).clone(), pass, salt)?)
+                    } else {
+                        let salt = generate_salt()?;
+                        m.salt = Some(salt);
+                        Some(derive_key((*params).clone(), pass, salt)?)
+                    }
+                } else {
+                    None
                 };
 
                 db.write_metadata(&m)
@@ -820,6 +874,7 @@ impl DatabaseBuilder {
         meta.tables
             .par_iter()
             .map(|table| {
+                // TODO consider if hashing the table name is worth it
                 let table_path = path.join(table);
                 create_dir_all(&table_path).context(DBError::FailedToCreateTableDir(table_path))?;
                 Ok(())
@@ -832,6 +887,8 @@ impl DatabaseBuilder {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Metadata {
+    params: Option<ArgonParams>,
+    salt: Option<Salt>,
     tables: HashSet<String>,
 }
 

@@ -233,5 +233,5 @@ fn test_database_exists() {
     };
 
     let id = db.insert(dbg!(&p)).expect("Failed to insert person");
-    assert!(db.exists(&id));
+    assert!(db.exists(&id).expect("Failed to check if person exists"));
 }

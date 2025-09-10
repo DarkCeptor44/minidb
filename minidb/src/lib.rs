@@ -275,7 +275,7 @@ mod traits;
 use std::{
     collections::HashSet,
     fmt::{Debug, Display},
-    fs::{create_dir_all, remove_file},
+    fs::{File, create_dir_all, remove_file},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -287,7 +287,6 @@ pub use traits::AsTable;
 use anyhow::{Context, Result};
 use cuid2::slug;
 use minidb_utils::{PathExt, deserialize_file, serialize_file};
-use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
@@ -312,10 +311,25 @@ use serde::{Deserialize, Serialize};
 ///     .build()
 ///     .unwrap();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Database {
-    file_lock: Arc<RwLock<()>>,
-    path: Arc<RwLock<PathBuf>>,
+    lock_file_path: Arc<PathBuf>,
+    path: Arc<PathBuf>,
+}
+
+impl Clone for Database {
+    fn clone(&self) -> Self {
+        Self {
+            lock_file_path: Arc::clone(&self.lock_file_path),
+            path: Arc::clone(&self.path),
+        }
+    }
+}
+
+impl Drop for Database {
+    fn drop(&mut self) {
+        let _ = remove_file(self.lock_file_path.as_path());
+    }
 }
 
 impl Database {
@@ -337,6 +351,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -354,6 +370,17 @@ impl Database {
     where
         T: AsTable,
     {
+        let lock_file = File::options()
+            .create(true)
+            .write(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         if id.is_none() {
             return Err(DBError::InvalidKey(id.to_string()).into());
         }
@@ -370,7 +397,7 @@ impl Database {
         // TODO restrict deleting record if other tables have foreign keys pointing to it
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let file_path = path.join(table_name).join(id.to_string());
 
         if !file_path.is_file() {
@@ -381,9 +408,7 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         remove_file(&file_path).context(DBError::FailedToRemoveFile(file_path))?;
-
         Ok(())
     }
 
@@ -399,6 +424,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -418,6 +445,17 @@ impl Database {
     where
         T: AsTable + for<'de> Deserialize<'de>,
     {
+        let lock_file = File::options()
+            .create(true)
+            .read(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         if id.is_none() {
             return Err(DBError::InvalidKey(id.to_string()).into());
         }
@@ -432,7 +470,7 @@ impl Database {
         }
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
         let file_path = table_dir_path.join(id.to_string());
 
@@ -444,10 +482,8 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.read();
         let mut record: T =
             deserialize_file(&file_path).context(DBError::FailedToDeserializeFile(file_path))?;
-
         record.set_id(id.clone());
 
         Ok(record)
@@ -463,6 +499,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
     /// * [`DBError::NoTables`]: No tables were found in the database
@@ -489,6 +527,17 @@ impl Database {
     where
         T: AsTable + Serialize,
     {
+        let lock_file = File::options()
+            .create(true)
+            .write(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         let meta = self
             .metadata()
             .context(DBError::FailedToReadMetadata)?
@@ -510,7 +559,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.exists_impl(ref_table, fk_id_str) {
+                if !self.exists_impl(ref_table, fk_id_str)? {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),
@@ -528,7 +577,7 @@ impl Database {
             }
         }
 
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
 
         create_dir_all(&table_dir_path)
@@ -545,33 +594,38 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))?;
-
         Ok(id)
     }
 
     /// Returns the metadata of the database
     fn metadata(&self) -> Result<Option<Metadata>> {
-        let path_guard = self.path.read();
-        let path = path_guard.as_path();
+        let lock_file = File::options()
+            .create(true)
+            .read(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        let path = self.path.as_path();
         let file_path = path.join("metadata");
 
         if !file_path.is_file() {
             return Ok(None);
         }
 
-        let _lock = self.file_lock.read();
         let data: Metadata = deserialize_file(file_path).context(DBError::FailedToReadMetadata)?;
-
         Ok(Some(data))
     }
 
-    /// Returns a read guard to the database path.
-    ///
-    /// The guard dereferences to a [`&PathBuf`](PathBuf) or [`&Path`](Path)
-    pub fn path(&self) -> RwLockReadGuard<'_, PathBuf> {
-        self.path.read()
+    /// Returns the path of the database directory
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
     }
 
     /// Checks if a record exists in the database
@@ -583,8 +637,13 @@ impl Database {
     /// ## Returns
     ///
     /// `true` if the record exists, `false` otherwise
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::FailedToOpenLockFile`]: could not open the lock file
+    /// * [`DBError::FailedToLockFile`]: could not lock the lock file
     #[must_use]
-    pub fn exists<T>(&self, id: &Id<T>) -> bool
+    pub fn exists<T>(&self, id: &Id<T>) -> Result<bool>
     where
         T: AsTable,
     {
@@ -592,10 +651,21 @@ impl Database {
     }
 
     /// Checks if a record exists in the database
-    fn exists_impl(&self, table_name: &str, id: &str) -> bool {
-        let path = self.path.read();
+    fn exists_impl(&self, table_name: &str, id: &str) -> Result<bool> {
+        let lock_file = File::options()
+            .create(true)
+            .read(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        let path = self.path.as_path();
         let file_path = path.join(table_name).join(id);
-        file_path.is_file()
+        Ok(file_path.is_file())
     }
 
     /// Updates a record in the table
@@ -606,6 +676,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -634,6 +706,17 @@ impl Database {
     where
         T: AsTable + Serialize,
     {
+        let lock_file = File::options()
+            .create(true)
+            .write(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         let id = record.get_id();
 
         if id.is_none() {
@@ -652,7 +735,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.exists_impl(ref_table, fk_id_str) {
+                if !self.exists_impl(ref_table, fk_id_str)? {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),
@@ -671,7 +754,7 @@ impl Database {
         }
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
 
         create_dir_all(&table_dir_path)
@@ -686,19 +769,26 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))
     }
 
     /// Writes the metadata of the database
     fn write_metadata(&self, meta: &Metadata) -> Result<()> {
-        let path_guard = self.path.read();
-        let path = path_guard.as_path();
+        let lock_file = File::options()
+            .create(true)
+            .write(true)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        let path = self.path.as_path();
         let file_path = path.join("metadata");
 
-        let _lock = self.file_lock.write();
         serialize_file(file_path, meta).context(DBError::FailedToSerializeMetadata)?;
-
         Ok(())
     }
 }
@@ -801,8 +891,8 @@ impl DatabaseBuilder {
         create_dir_all(&path).context(DBError::FailedToCreateDatabase(path.clone()))?;
 
         let db = Database {
-            file_lock: Arc::new(RwLock::new(())),
-            path: Arc::new(RwLock::new(path.clone())),
+            lock_file_path: Arc::new(path.join(".minidb-lock")),
+            path: Arc::new(path.clone()),
         };
         let meta =
             if let Some(meta) = Database::metadata(&db).context(DBError::FailedToReadMetadata)? {

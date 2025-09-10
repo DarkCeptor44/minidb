@@ -14,7 +14,6 @@ anyhow.workspace = true
 cuid2 = "^0.1"
 minidb-macros = { path = "../minidb-macros" }
 minidb-utils = { path = "../minidb-utils" }
-parking_lot = "^0.12"
 rayon = "^1"
 serde = { version = "^1", features = ["derive"] }
 tempfile = "^3"

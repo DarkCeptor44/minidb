@@ -176,7 +176,10 @@ fn exists(b: Bencher, n: usize) {
     let id = db.insert(&p).expect("Failed to insert person");
     b.bench(|| {
         for _ in 0..n {
-            black_box(db.exists(black_box(&id)));
+            black_box(
+                db.exists(black_box(&id))
+                    .expect("Failed to check if person exists"),
+            );
         }
         black_box(());
     });

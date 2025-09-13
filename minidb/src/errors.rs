@@ -28,6 +28,14 @@ pub enum DBError {
     #[error("Failed to deserialize file: {0}")]
     FailedToDeserializeFile(PathBuf),
 
+    /// Failed to lock file
+    #[error("Failed to lock file: {0}")]
+    FailedToLockFile(PathBuf),
+
+    /// Failed to open lock file
+    #[error("Failed to open lock file: {0}")]
+    FailedToOpenLockFile(PathBuf),
+
     /// Failed to read metadata
     #[error("Failed to read metadata")]
     FailedToReadMetadata,

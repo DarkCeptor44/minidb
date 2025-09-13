@@ -8,7 +8,7 @@
 //! * Uses [bitcode](https://crates.io/crates/bitcode) as the binary format to store the data
 //! * Uses [cuid2] slugs for record IDs
 //! * Easy table definition with procedural macros
-//! * Built around poison-free read-write locks to be thread-safe
+//! * Built with interprocess file locks for thread-safety
 //! * Relies on [serde] for serialization and deserialization of the tables
 //!
 //! ## Why not async
@@ -183,64 +183,64 @@
 //! database    fastest       │ slowest       │ median        │ mean          │ samples │ iters
 //! ├─ delete                 │               │               │               │         │
 //! │  ├─ 1                   │               │               │               │         │
-//! │  │  ├─ t=1  198.6 µs      │ 312.4 µs      │ 203.5 µs      │ 208.6 µs      │ 100     │ 100
-//! │  │  ├─ t=4  414.7 µs      │ 924.2 µs      │ 653.5 µs      │ 644.5 µs      │ 100     │ 100
-//! │  │  ├─ t=8  731 µs        │ 2.041 ms      │ 1.308 ms      │ 1.286 ms      │ 104     │ 104
-//! │  │  ╰─ t=16  1.365 ms      │ 3.538 ms      │ 2.408 ms      │ 2.401 ms      │ 112     │ 112
+//! │  │  ├─ t=1  273.5 µs      │ 327.1 µs      │ 288.9 µs      │ 288.8 µs      │ 100     │ 100
+//! │  │  ├─ t=4  477.9 µs      │ 1.368 ms      │ 915.8 µs      │ 887.8 µs      │ 100     │ 100
+//! │  │  ├─ t=8  696.6 µs      │ 2.804 ms      │ 1.661 ms      │ 1.653 ms      │ 104     │ 104
+//! │  │  ╰─ t=16  1.062 ms      │ 4.956 ms      │ 3.002 ms      │ 2.951 ms      │ 112     │ 112
 //! │  ╰─ 1000                   │               │               │               │         │
-//! │     ├─ t=1   200.2 ms      │ 244.6 ms      │ 212 ms        │ 214.1 ms      │ 100     │ 100
-//! │     ├─ t=4   754.9 ms      │ 846.4 ms      │ 787.5 ms      │ 787.6 ms      │ 100     │ 100
-//! │     ├─ t=8   1.57 s        │ 1.767 s       │ 1.653 s       │ 1.651 s       │ 104     │ 104
-//! │     ╰─ t=16  3.413 s       │ 3.829 s       │ 3.458 s       │ 3.538 s       │ 112     │ 112
+//! │     ├─ t=1   274.3 ms      │ 298.7 ms      │ 283.9 ms      │ 285 ms        │ 100     │ 100
+//! │     ├─ t=4   1.034 s       │ 1.119 s       │ 1.069 s       │ 1.068 s       │ 100     │ 100
+//! │     ├─ t=8   2.035 s       │ 2.632 s       │ 2.128 s       │ 2.165 s       │ 104     │ 104
+//! │     ╰─ t=16  4.339 s       │ 4.542 s       │ 4.4 s         │ 4.416 s       │ 112     │ 112
 //! ├─ exists                    │               │               │               │         │
 //! │  ├─ 1                      │               │               │               │         │
-//! │  │  ├─ t=1   21.09 µs      │ 77.49 µs      │ 21.59 µs      │ 23.08 µs      │ 100     │ 100
-//! │  │  ├─ t=4   35.89 µs      │ 160.5 µs      │ 98.79 µs      │ 102.1 µs      │ 100     │ 100
-//! │  │  ├─ t=8   118.6 µs      │ 279.7 µs      │ 184.3 µs      │ 186.2 µs      │ 104     │ 104
-//! │  │  ╰─ t=16  65.59 µs      │ 563.7 µs      │ 462.9 µs      │ 439.2 µs      │ 112     │ 112
+//! │  │  ├─ t=1   91.49 µs      │ 191.8 µs      │ 92.69 µs      │ 94.87 µs      │ 100     │ 100
+//! │  │  ├─ t=4   276.2 µs      │ 425.2 µs      │ 343.6 µs      │ 348 µs        │ 100     │ 100
+//! │  │  ├─ t=8   479.3 µs      │ 774.1 µs      │ 613.5 µs      │ 607.9 µs      │ 104     │ 104
+//! │  │  ╰─ t=16  714.5 µs      │ 1.31 ms       │ 1.038 ms      │ 1.024 ms      │ 112     │ 112
 //! │  ╰─ 1000                   │               │               │               │         │
-//! │     ├─ t=1   21.12 ms      │ 30.87 ms      │ 21.75 ms      │ 22.2 ms       │ 100     │ 100
-//! │     ├─ t=4   68.53 ms      │ 84.88 ms      │ 74.01 ms      │ 73.97 ms      │ 100     │ 100
-//! │     ├─ t=8   146.1 ms      │ 185.4 ms      │ 160.6 ms      │ 164 ms        │ 104     │ 104
-//! │     ╰─ t=16  327.4 ms      │ 403.2 ms      │ 366 ms        │ 362 ms        │ 112     │ 112
+//! │     ├─ t=1   91.47 ms      │ 100.3 ms      │ 92.27 ms      │ 92.59 ms      │ 100     │ 100
+//! │     ├─ t=4   188.3 ms      │ 217.5 ms      │ 195.7 ms      │ 198.2 ms      │ 100     │ 100
+//! │     ├─ t=8   466.9 ms      │ 511.9 ms      │ 509 ms        │ 504.7 ms      │ 104     │ 104
+//! │     ╰─ t=16  1.024 s       │ 1.056 s       │ 1.048 s       │ 1.044 s       │ 112     │ 112
 //! ├─ get                       │               │               │               │         │
 //! │  ├─ 1                      │               │               │               │         │
-//! │  │  ├─ t=1   130.3 µs      │ 545.8 µs      │ 131.8 µs      │ 137.8 µs      │ 100     │ 100
-//! │  │  ├─ t=4   283.3 µs      │ 618.4 µs      │ 476.5 µs      │ 474 µs        │ 100     │ 100
-//! │  │  ├─ t=8   578.7 µs      │ 1.297 ms      │ 942.7 µs      │ 939.7 µs      │ 104     │ 104
-//! │  │  ╰─ t=16  864.5 µs      │ 2.236 ms      │ 1.933 ms      │ 1.845 ms      │ 112     │ 112
+//! │  │  ├─ t=1   205.5 µs      │ 508 µs        │ 207.8 µs      │ 213.9 µs      │ 100     │ 100
+//! │  │  ├─ t=4   492.5 µs      │ 837.1 µs      │ 663.9 µs      │ 660.4 µs      │ 100     │ 100
+//! │  │  ├─ t=8   635.2 µs      │ 1.518 ms      │ 1.279 ms      │ 1.237 ms      │ 104     │ 104
+//! │  │  ╰─ t=16  1.039 ms      │ 2.566 ms      │ 2.297 ms      │ 2.113 ms      │ 112     │ 112
 //! │  ╰─ 1000                   │               │               │               │         │
-//! │     ├─ t=1   129.7 ms      │ 157.7 ms      │ 131.8 ms      │ 133.6 ms      │ 100     │ 100
-//! │     ├─ t=4   279 ms        │ 345 ms        │ 301.8 ms      │ 305.7 ms      │ 100     │ 100
-//! │     ├─ t=8   567 ms        │ 619.6 ms      │ 579.9 ms      │ 588.7 ms      │ 104     │ 104
-//! │     ╰─ t=16  1.186 s       │ 1.334 s       │ 1.2 s         │ 1.222 s       │ 112     │ 112
+//! │     ├─ t=1   204.8 ms      │ 210.1 ms      │ 206.4 ms      │ 206.6 ms      │ 100     │ 100
+//! │     ├─ t=4   376.5 ms      │ 418.2 ms      │ 392.6 ms      │ 392.8 ms      │ 100     │ 100
+//! │     ├─ t=8   686.4 ms      │ 732.9 ms      │ 712 ms        │ 711.8 ms      │ 104     │ 104
+//! │     ╰─ t=16  1.45 s        │ 1.587 s       │ 1.46 s        │ 1.478 s       │ 112     │ 112
 //! ├─ insert                    │               │               │               │         │
 //! │  ├─ 1                      │               │               │               │         │
-//! │  │  ├─ t=1   609.7 µs      │ 5.124 ms      │ 714.3 µs      │ 787.1 µs      │ 100     │ 100
-//! │  │  ├─ t=4   1.025 ms      │ 3.398 ms      │ 2.05 ms       │ 2.019 ms      │ 100     │ 100
-//! │  │  ├─ t=8   1.45 ms       │ 6.377 ms      │ 3.825 ms      │ 3.718 ms      │ 104     │ 104
-//! │  │  ╰─ t=16  2.644 ms      │ 12.6 ms       │ 6.949 ms      │ 7.036 ms      │ 112     │ 112
+//! │  │  ├─ t=1   698.4 µs      │ 1.132 ms      │ 717.1 µs      │ 734.9 µs      │ 100     │ 100
+//! │  │  ├─ t=4   919.5 µs      │ 3.753 ms      │ 2.177 ms      │ 2.099 ms      │ 100     │ 100
+//! │  │  ├─ t=8   1.221 ms      │ 7.17 ms       │ 4.168 ms      │ 3.957 ms      │ 104     │ 104
+//! │  │  ╰─ t=16  1.603 ms      │ 13.72 ms      │ 7.236 ms      │ 7.239 ms      │ 112     │ 112
 //! │  ╰─ 1000                   │               │               │               │         │
-//! │     ├─ t=1   680.2 ms      │ 945.2 ms      │ 728.2 ms      │ 734.9 ms      │ 100     │ 100
-//! │     ├─ t=4   2.674 s       │ 2.917 s       │ 2.766 s       │ 2.774 s       │ 100     │ 100
-//! │     ├─ t=8   5.276 s       │ 8.274 s       │ 5.393 s       │ 5.704 s       │ 104     │ 104
-//! │     ╰─ t=16  10.51 s       │ 11.67 s       │ 10.98 s       │ 11.1 s        │ 112     │ 112
+//! │     ├─ t=1   724.4 ms      │ 1.527 s       │ 780.7 ms      │ 819.9 ms      │ 100     │ 100
+//! │     ├─ t=4   2.975 s       │ 3.191 s       │ 3.091 s       │ 3.085 s       │ 100     │ 100
+//! │     ├─ t=8   5.979 s       │ 6.386 s       │ 6.154 s       │ 6.152 s       │ 104     │ 104
+//! │     ╰─ t=16  12.01 s       │ 12.63 s       │ 12.35 s       │ 12.33 s       │ 112     │ 112
 //! ├─ new                       │               │               │               │         │
-//! │  ├─ t=1      1.171 ms      │ 1.547 ms      │ 1.233 ms      │ 1.254 ms      │ 100     │ 100
-//! │  ├─ t=4      2.218 ms      │ 3.641 ms      │ 2.561 ms      │ 2.585 ms      │ 100     │ 100
-//! │  ├─ t=8      3.748 ms      │ 5.438 ms      │ 4.578 ms      │ 4.58 ms       │ 104     │ 104
-//! │  ╰─ t=16     6.147 ms      │ 9.398 ms      │ 8.493 ms      │ 8.267 ms      │ 112     │ 112
+//! │  ├─ t=1      1.485 ms      │ 1.787 ms      │ 1.534 ms      │ 1.54 ms       │ 100     │ 100
+//! │  ├─ t=4      2.539 ms      │ 3.575 ms      │ 2.995 ms      │ 2.987 ms      │ 100     │ 100
+//! │  ├─ t=8      4.216 ms      │ 5.654 ms      │ 5.088 ms      │ 4.999 ms      │ 104     │ 104
+//! │  ╰─ t=16     7.947 ms      │ 10.85 ms      │ 9.929 ms      │ 9.728 ms      │ 112     │ 112
 //! ╰─ update                    │               │               │               │         │
 //!    ├─ 1                      │               │               │               │         │
-//!    │  ├─ t=1   677.9 µs      │ 1.784 ms      │ 812 µs        │ 855.6 µs      │ 100     │ 100
-//!    │  ├─ t=4   1.159 ms      │ 3.903 ms      │ 2.4 ms        │ 2.464 ms      │ 100     │ 100
-//!    │  ├─ t=8   1.603 ms      │ 6.967 ms      │ 3.887 ms      │ 3.995 ms      │ 104     │ 104
-//!    │  ╰─ t=16  2.165 ms      │ 15.49 ms      │ 8.379 ms      │ 8.435 ms      │ 112     │ 112
+//!    │  ├─ t=1   746 µs        │ 6.473 ms      │ 800 µs        │ 886.6 µs      │ 100     │ 100
+//!    │  ├─ t=4   1.042 ms      │ 12.66 ms      │ 2.802 ms      │ 2.858 ms      │ 100     │ 100
+//!    │  ├─ t=8   1.165 ms      │ 7.75 ms       │ 4.052 ms      │ 4.146 ms      │ 104     │ 104
+//!    │  ╰─ t=16  1.586 ms      │ 15.22 ms      │ 8.026 ms      │ 8.066 ms      │ 112     │ 112
 //!    ╰─ 1000                   │               │               │               │         │
-//!       ├─ t=1   711.3 ms      │ 839.4 ms      │ 730.3 ms      │ 734.1 ms      │ 100     │ 100
-//!       ├─ t=4   3.024 s       │ 3.373 s       │ 3.05 s        │ 3.078 s       │ 100     │ 100
-//!       ├─ t=8   6.158 s       │ 6.343 s       │ 6.251 s       │ 6.254 s       │ 104     │ 104
-//!       ╰─ t=16  12.78 s       │ 12.95 s       │ 12.85 s       │ 12.87 s       │ 112     │ 112
+//!       ├─ t=1   771 ms        │ 839.2 ms      │ 796.9 ms      │ 799 ms        │ 100     │ 100
+//!       ├─ t=4   3.232 s       │ 3.406 s       │ 3.282 s       │ 3.293 s       │ 100     │ 100
+//!       ├─ t=8   6.704 s       │ 6.943 s       │ 6.748 s       │ 6.792 s       │ 104     │ 104
+//!       ╰─ t=16  13.91 s       │ 14.37 s       │ 14.08 s       │ 14.09 s       │ 112     │ 112
 //! ```
 //!
 //! ### Id
@@ -275,7 +275,7 @@ mod traits;
 use std::{
     collections::HashSet,
     fmt::{Debug, Display},
-    fs::{create_dir_all, remove_file},
+    fs::{File, create_dir_all, remove_file},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -287,7 +287,6 @@ pub use traits::AsTable;
 use anyhow::{Context, Result};
 use cuid2::slug;
 use minidb_utils::{PathExt, deserialize_file, serialize_file};
-use parking_lot::{RwLock, RwLockReadGuard};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 
@@ -312,10 +311,19 @@ use serde::{Deserialize, Serialize};
 ///     .build()
 ///     .unwrap();
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Database {
-    file_lock: Arc<RwLock<()>>,
-    path: Arc<RwLock<PathBuf>>,
+    lock_file_path: Arc<PathBuf>,
+    path: Arc<PathBuf>,
+}
+
+impl Clone for Database {
+    fn clone(&self) -> Self {
+        Self {
+            lock_file_path: Arc::clone(&self.lock_file_path),
+            path: Arc::clone(&self.path),
+        }
+    }
 }
 
 impl Database {
@@ -337,6 +345,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -354,12 +364,17 @@ impl Database {
     where
         T: AsTable,
     {
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         if id.is_none() {
             return Err(DBError::InvalidKey(id.to_string()).into());
         }
 
         let meta = self
-            .metadata()
+            .metadata_unlocked()
             .context(DBError::FailedToReadMetadata)?
             .context(DBError::NoMetadata)?;
 
@@ -370,7 +385,7 @@ impl Database {
         // TODO restrict deleting record if other tables have foreign keys pointing to it
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let file_path = path.join(table_name).join(id.to_string());
 
         if !file_path.is_file() {
@@ -381,9 +396,7 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         remove_file(&file_path).context(DBError::FailedToRemoveFile(file_path))?;
-
         Ok(())
     }
 
@@ -399,6 +412,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -418,12 +433,17 @@ impl Database {
     where
         T: AsTable + for<'de> Deserialize<'de>,
     {
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         if id.is_none() {
             return Err(DBError::InvalidKey(id.to_string()).into());
         }
 
         let meta = self
-            .metadata()
+            .metadata_unlocked()
             .context(DBError::FailedToReadMetadata)?
             .context(DBError::NoMetadata)?;
 
@@ -432,7 +452,7 @@ impl Database {
         }
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
         let file_path = table_dir_path.join(id.to_string());
 
@@ -444,13 +464,24 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.read();
         let mut record: T =
             deserialize_file(&file_path).context(DBError::FailedToDeserializeFile(file_path))?;
-
         record.set_id(id.clone());
 
         Ok(record)
+    }
+
+    /// Gets the lock file
+    fn get_lock(&self) -> Result<File> {
+        // TODO use per-table locking
+        File::options()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .open(self.lock_file_path.as_path())
+            .context(DBError::FailedToOpenLockFile(
+                self.lock_file_path.to_path_buf(),
+            ))
     }
 
     /// Inserts a record into the table and returns the ID
@@ -463,6 +494,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
     /// * [`DBError::NoTables`]: No tables were found in the database
@@ -489,8 +522,13 @@ impl Database {
     where
         T: AsTable + Serialize,
     {
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         let meta = self
-            .metadata()
+            .metadata_unlocked()
             .context(DBError::FailedToReadMetadata)?
             .context(DBError::NoMetadata)?;
 
@@ -510,7 +548,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.exists_impl(ref_table, fk_id_str) {
+                if !self.exists_impl_unlocked(ref_table, fk_id_str) {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),
@@ -528,7 +566,7 @@ impl Database {
             }
         }
 
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
 
         create_dir_all(&table_dir_path)
@@ -545,33 +583,37 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))?;
-
         Ok(id)
     }
 
     /// Returns the metadata of the database
     fn metadata(&self) -> Result<Option<Metadata>> {
-        let path_guard = self.path.read();
-        let path = path_guard.as_path();
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        self.metadata_unlocked()
+    }
+
+    /// Returns the metadata of the database without locking
+    fn metadata_unlocked(&self) -> Result<Option<Metadata>> {
+        let path = self.path.as_path();
         let file_path = path.join("metadata");
 
         if !file_path.is_file() {
             return Ok(None);
         }
 
-        let _lock = self.file_lock.read();
         let data: Metadata = deserialize_file(file_path).context(DBError::FailedToReadMetadata)?;
-
         Ok(Some(data))
     }
 
-    /// Returns a read guard to the database path.
-    ///
-    /// The guard dereferences to a [`&PathBuf`](PathBuf) or [`&Path`](Path)
-    pub fn path(&self) -> RwLockReadGuard<'_, PathBuf> {
-        self.path.read()
+    /// Returns the path of the database directory
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
     }
 
     /// Checks if a record exists in the database
@@ -583,8 +625,12 @@ impl Database {
     /// ## Returns
     ///
     /// `true` if the record exists, `false` otherwise
-    #[must_use]
-    pub fn exists<T>(&self, id: &Id<T>) -> bool
+    ///
+    /// ## Errors
+    ///
+    /// * [`DBError::FailedToOpenLockFile`]: could not open the lock file
+    /// * [`DBError::FailedToLockFile`]: could not lock the lock file
+    pub fn exists<T>(&self, id: &Id<T>) -> Result<bool>
     where
         T: AsTable,
     {
@@ -592,8 +638,18 @@ impl Database {
     }
 
     /// Checks if a record exists in the database
-    fn exists_impl(&self, table_name: &str, id: &str) -> bool {
-        let path = self.path.read();
+    fn exists_impl(&self, table_name: &str, id: &str) -> Result<bool> {
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock_shared()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        Ok(self.exists_impl_unlocked(table_name, id))
+    }
+
+    /// Checks if a record exists in the database without locking
+    fn exists_impl_unlocked(&self, table_name: &str, id: &str) -> bool {
+        let path = self.path.as_path();
         let file_path = path.join(table_name).join(id);
         file_path.is_file()
     }
@@ -606,6 +662,8 @@ impl Database {
     ///
     /// ## Errors
     ///
+    /// * [`DBError::FailedToOpenLockFile`]: Failed to open lock file
+    /// * [`DBError::FailedToLockFile`]: Failed to lock file
     /// * [`DBError::InvalidKey`]: Invalid key
     /// * [`DBError::FailedToReadMetadata`]: Failed to read metadata
     /// * [`DBError::NoMetadata`]: Metadata not found
@@ -634,6 +692,11 @@ impl Database {
     where
         T: AsTable + Serialize,
     {
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
         let id = record.get_id();
 
         if id.is_none() {
@@ -641,7 +704,7 @@ impl Database {
         }
 
         let meta = self
-            .metadata()
+            .metadata_unlocked()
             .context(DBError::FailedToReadMetadata)?
             .context(DBError::NoMetadata)?;
 
@@ -652,7 +715,7 @@ impl Database {
         for (field_name, ref_table, get_fk_id) in T::get_foreign_keys() {
             let fk_id_option = get_fk_id(record);
             if let Some(fk_id_str) = fk_id_option {
-                if !self.exists_impl(ref_table, fk_id_str) {
+                if !self.exists_impl_unlocked(ref_table, fk_id_str) {
                     return Err(DBError::ForeignKeyViolation {
                         field: field_name.to_string(),
                         table: ref_table.to_string(),
@@ -671,7 +734,7 @@ impl Database {
         }
 
         let table_name = T::name();
-        let path = self.path.read();
+        let path = self.path.as_path();
         let table_dir_path = path.join(table_name);
 
         create_dir_all(&table_dir_path)
@@ -686,19 +749,20 @@ impl Database {
             .into());
         }
 
-        let _lock = self.file_lock.write();
         serialize_file(&file_path, record).context(DBError::FailedToSerializeFile(file_path))
     }
 
     /// Writes the metadata of the database
     fn write_metadata(&self, meta: &Metadata) -> Result<()> {
-        let path_guard = self.path.read();
-        let path = path_guard.as_path();
+        let lock_file = self.get_lock()?;
+        lock_file
+            .lock()
+            .context(DBError::FailedToLockFile(self.lock_file_path.to_path_buf()))?;
+
+        let path = self.path.as_path();
         let file_path = path.join("metadata");
 
-        let _lock = self.file_lock.write();
         serialize_file(file_path, meta).context(DBError::FailedToSerializeMetadata)?;
-
         Ok(())
     }
 }
@@ -801,8 +865,8 @@ impl DatabaseBuilder {
         create_dir_all(&path).context(DBError::FailedToCreateDatabase(path.clone()))?;
 
         let db = Database {
-            file_lock: Arc::new(RwLock::new(())),
-            path: Arc::new(RwLock::new(path.clone())),
+            lock_file_path: Arc::new(path.join(".minidb-lock")),
+            path: Arc::new(path.clone()),
         };
         let meta =
             if let Some(meta) = Database::metadata(&db).context(DBError::FailedToReadMetadata)? {

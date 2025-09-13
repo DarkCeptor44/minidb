@@ -326,12 +326,6 @@ impl Clone for Database {
     }
 }
 
-impl Drop for Database {
-    fn drop(&mut self) {
-        let _ = remove_file(self.lock_file_path.as_path());
-    }
-}
-
 impl Database {
     /// Creates a new database builder
     #[must_use]

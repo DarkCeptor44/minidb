@@ -479,6 +479,7 @@ impl Database {
 
     /// Gets the lock file
     fn get_lock(&self) -> Result<File> {
+        // TODO use per-table locking
         File::options()
             .create(true)
             .write(true)

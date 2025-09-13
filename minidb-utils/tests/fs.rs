@@ -11,7 +11,7 @@
 
 use minidb_utils::{deserialize_file, read_from_file, serialize_file};
 use serde::{Deserialize, Serialize};
-use tempfile::{tempdir, NamedTempFile};
+use tempfile::{NamedTempFile, tempdir};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Person {

@@ -9,7 +9,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use divan::{black_box, Bencher};
+use divan::{Bencher, black_box};
 use minidb_utils::PathExt;
 use tempfile::tempdir;
 

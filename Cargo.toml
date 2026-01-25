@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["minidb", "minidb-macros"]
+members = ["minidb"]
 
 [workspace.package]
 authors = ["DarkCeptor44"]

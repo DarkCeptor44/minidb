@@ -5,11 +5,14 @@ members = ["minidb"]
 [workspace.package]
 authors = ["DarkCeptor44"]
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.85"
 license = "LGPL-3.0-or-later"
 homepage = "https://github.com/DarkCeptor44/minidb"
 repository = "https://github.com/DarkCeptor44/minidb"
 
 [workspace.dependencies]
 anyhow = "^1"
-thiserror = "^2"
+cuid2 = "^0.1"
+postcard = { version = "^1", features = ["use-std"] }
+redb = "^3"
+serde = { version = "^1", features = ["derive"] }

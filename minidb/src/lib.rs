@@ -1,21 +1,18 @@
-pub mod types;
-
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use anyhow::{Context, Result};
-use redb::{Database, ReadableDatabase, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
-use types::Id;
 
 pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
-    const TABLE: TableDefinition<'_, Id, &[u8]>;
+    const TABLE: TableDefinition<'_, &'static str, &[u8]>;
 
-    fn get_key(&self) -> Id;
-    fn set_id(&mut self, id: Id);
+    fn get_id(&self) -> &str;
+    fn set_id(&mut self, id: String);
 }
 
 pub struct Store {
-    db: Arc<Database>,
+    db: Database,
 }
 
 impl Store {
@@ -26,31 +23,31 @@ impl Store {
         let db = Database::builder()
             .create(path)
             .context("failed to create database")?;
-        Ok(Self { db: Arc::new(db) })
+        Ok(Self { db })
     }
 
-    pub fn insert<T>(&self, item: &mut T) -> Result<()>
+    pub fn save<T>(&self, mut item: T) -> Result<()>
     where
         T: TableModel,
     {
-        if item.get_key().is_none() {
-            let id = Id::generate();
+        if item.get_id().trim().is_empty() {
+            let id = cuid2::slug();
             item.set_id(id);
         }
 
         let txn = self.db.begin_write().context("failed to begin write")?;
         {
             let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
             table
-                .insert(item.get_key(), bytes.as_slice())
+                .insert(item.get_id(), bytes.as_slice())
                 .context("failed to insert into table")?;
         }
         txn.commit().context("failed to commit to database")?;
         Ok(())
     }
 
-    pub fn get<T>(&self, id: &Id) -> Result<Option<T>>
+    pub fn get<T>(&self, id: &str) -> Result<Option<T>>
     where
         T: TableModel,
     {
@@ -65,5 +62,23 @@ impl Store {
         } else {
             Ok(None)
         }
+    }
+
+    pub fn all<T>(&self) -> Result<Vec<T>>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_read().context("failed to begin read")?;
+        let table = txn.open_table(T::TABLE).context("failed to open table")?;
+
+        let mut results = Vec::new();
+        for item in table.iter()? {
+            let (_key, value) = item?;
+            let decoded: T = postcard::from_bytes(value.value())
+                .context("failed to deserialize from postcard")?;
+            results.push(decoded);
+        }
+
+        Ok(results)
     }
 }

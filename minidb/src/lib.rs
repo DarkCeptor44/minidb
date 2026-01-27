@@ -1,12 +1,14 @@
 pub use redb;
 
-use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
 use serde::{Deserialize, Serialize};
 
 const SETTINGS_TABLE: TableDefinition<&'static str, &[u8]> = TableDefinition::new("settings");
+
+type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
 
 pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
     const TABLE: TableDefinition<'_, &'static str, &[u8]>;
@@ -15,24 +17,60 @@ pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
     fn set_id(&mut self, id: String);
 }
 
+pub struct StoreBuilder {
+    path: PathBuf,
+    initializers: Vec<Initializer>,
+}
+
+impl StoreBuilder {
+    pub fn new<P>(path: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        Self {
+            path: path.into(),
+            initializers: Vec::new(),
+        }
+    }
+
+    pub fn table<T>(mut self) -> Self
+    where
+        T: TableModel + 'static,
+    {
+        self.initializers.push(Box::new(|txn| {
+            txn.open_table(T::TABLE)
+                .map(|_| ())
+                .context("failed to init table")?;
+            Ok(())
+        }));
+        self
+    }
+
+    pub fn build(self) -> Result<Store> {
+        let db = Database::builder()
+            .create(&self.path)
+            .context("failed to create database file")?;
+
+        let txn = db.begin_write().context("failed to begin bootstrap txn")?;
+        for init in self.initializers {
+            init(&txn)?;
+        }
+        txn.commit().context("failed to commit bootstrap")?;
+
+        Ok(Store { db })
+    }
+}
+
 pub struct Store {
     db: Database,
 }
 
 impl Store {
-    pub fn new<P>(path: P) -> Result<Self>
+    pub fn builder<P>(path: P) -> StoreBuilder
     where
-        P: AsRef<Path>,
+        P: Into<PathBuf>,
     {
-        let db = Database::builder()
-            .create(path)
-            .context("failed to create database")?;
-        let store = Self { db };
-        store
-            .create_table_impl(SETTINGS_TABLE)
-            .context("failed to bootstrap tables")?;
-
-        Ok(store)
+        StoreBuilder::new(path)
     }
 
     // EMD OF BUILDERS

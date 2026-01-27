@@ -76,7 +76,11 @@ impl CliDb {
 fn test_store_place_order() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = CliDb {
-        storage: Store::new(temp_file).expect("failed to create storage"),
+        storage: Store::builder(temp_file.path())
+            .table::<Restaurant>()
+            .table::<Order>()
+            .build()
+            .expect("failed to create storage"),
     };
     let r = Restaurant {
         id: "bca".to_string(),

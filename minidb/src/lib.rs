@@ -2,7 +2,7 @@ pub use redb;
 
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 
@@ -177,6 +177,26 @@ impl Store {
                 .context("failed to insert into table")?;
         }
         txn.commit().context("failed to commit to database")?;
+        Ok(())
+    }
+
+    pub fn update<T>(&self, item: T) -> Result<()>
+    where
+        T: TableModel,
+    {
+        if item.get_id().trim().is_empty() {
+            return Err(anyhow!("id cannot be empty"));
+        }
+
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+            table
+                .insert(item.get_id(), bytes.as_slice())
+                .context("failed to update item")?;
+        }
+        txn.commit().context("failed to commit write to database")?;
         Ok(())
     }
 }

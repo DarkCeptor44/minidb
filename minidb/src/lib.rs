@@ -199,4 +199,18 @@ impl Store {
         txn.commit().context("failed to commit write to database")?;
         Ok(())
     }
+
+    pub fn export_table<T>(&self, pretty: bool) -> Result<String>
+    where
+        T: TableModel,
+    {
+        let all_items: Vec<T> = self.all().context("failed to get all items")?;
+        let json = if pretty {
+            serde_json::to_string_pretty(&all_items)
+        } else {
+            serde_json::to_string(&all_items)
+        }
+        .context("failed to serialize to JSON")?;
+        Ok(json)
+    }
 }

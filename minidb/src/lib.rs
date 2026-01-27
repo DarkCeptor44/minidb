@@ -149,6 +149,19 @@ impl Store {
         }
     }
 
+    pub fn remove<T>(&self, key: &str) -> Result<()>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            table.remove(key).context("failed to remove item")?;
+        }
+        txn.commit().context("failed to commit write")?;
+        Ok(())
+    }
+
     pub fn set_setting<T>(&self, key: &str, value: &T) -> Result<()>
     where
         T: Serialize,

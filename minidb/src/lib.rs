@@ -92,6 +92,27 @@ impl Store {
         Ok(())
     }
 
+    pub fn insert<T>(&self, mut item: T) -> Result<()>
+    where
+        T: TableModel,
+    {
+        if item.get_id().trim().is_empty() {
+            let id = cuid2::slug();
+            item.set_id(id);
+        }
+
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+            table
+                .insert(item.get_id(), bytes.as_slice())
+                .context("failed to insert into table")?;
+        }
+        txn.commit().context("failed to commit to database")?;
+        Ok(())
+    }
+
     pub fn get<T>(&self, id: &str) -> Result<Option<T>>
     where
         T: TableModel,
@@ -126,27 +147,6 @@ impl Store {
         } else {
             Ok(None)
         }
-    }
-
-    pub fn save<T>(&self, mut item: T) -> Result<()>
-    where
-        T: TableModel,
-    {
-        if item.get_id().trim().is_empty() {
-            let id = cuid2::slug();
-            item.set_id(id);
-        }
-
-        let txn = self.db.begin_write().context("failed to begin write")?;
-        {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
-            table
-                .insert(item.get_id(), bytes.as_slice())
-                .context("failed to insert into table")?;
-        }
-        txn.commit().context("failed to commit to database")?;
-        Ok(())
     }
 
     pub fn set_setting<T>(&self, key: &str, value: &T) -> Result<()>

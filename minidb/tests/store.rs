@@ -8,6 +8,20 @@ struct CliDb {
     storage: Store,
 }
 
+impl std::ops::Deref for CliDb {
+    type Target = Store;
+
+    fn deref(&self) -> &Self::Target {
+        &self.storage
+    }
+}
+
+impl std::ops::DerefMut for CliDb {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.storage
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct Restaurant {
     pub id: String,
@@ -46,19 +60,15 @@ impl TableModel for Order {
 
 impl CliDb {
     pub fn place_order(&self, order: Order) -> Result<()> {
-        if self
-            .storage
-            .get::<Restaurant>(&order.restaurant_id)?
-            .is_none()
-        {
+        if self.get::<Restaurant>(&order.restaurant_id)?.is_none() {
             return Err(anyhow!("Restaurant not found"));
         }
 
-        self.storage.save(order)
+        self.insert(order)
     }
 
     pub fn all_restaurants(&self) -> Result<Vec<Restaurant>> {
-        self.storage.all()
+        self.all()
     }
 }
 
@@ -74,8 +84,8 @@ fn test_store_place_order() {
     let r2 = Restaurant {
         id: "bca2".to_string(),
     };
-    db.storage.save(r).unwrap();
-    db.storage.save(r2).unwrap();
+    db.insert(r).unwrap();
+    db.insert(r2).unwrap();
 
     let o = Order {
         id: "abc".to_string(),
@@ -88,7 +98,7 @@ fn test_store_place_order() {
     assert_eq!(all[0].id, "bca");
     assert_eq!(all[1].id, "bca2");
 
-    let o2 = db.storage.get::<Order>("abc").unwrap().unwrap();
+    let o2 = db.get::<Order>("abc").unwrap().unwrap();
     assert_eq!(o2.id, "abc");
     assert_eq!(o2.restaurant_id, "bca");
 }

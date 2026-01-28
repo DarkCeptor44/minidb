@@ -52,6 +52,11 @@ impl StoreBuilder {
             .context("failed to create database file")?;
 
         let txn = db.begin_write().context("failed to begin bootstrap txn")?;
+        {
+            let _ = txn
+                .open_table(SETTINGS_TABLE)
+                .context("failed to init settings table")?;
+        }
         for init in self.initializers {
             init(&txn)?;
         }

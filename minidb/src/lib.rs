@@ -151,14 +151,14 @@ impl Store {
         Ok(())
     }
 
-    pub fn insert_many<T>(&self, items: Vec<T>) -> Result<()>
+    pub fn insert_many<T>(&self, items: &mut [T]) -> Result<()>
     where
         T: TableModel,
     {
         let txn = self.db.begin_write().context("failed to begin write")?;
         {
             let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            for mut item in items {
+            for item in items {
                 if item.get_id().trim().is_empty() {
                     let id = cuid2::slug();
                     item.set_id(id);

@@ -211,26 +211,6 @@ impl Store {
         }
     }
 
-    pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
-    where
-        T: TableModel,
-    {
-        let txn = self.db.begin_write().context("failed to begin write")?;
-        let mut result = None;
-        {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let maybe_bytes = table.remove(key).context("failed to remove item")?;
-
-            if let Some(bytes) = maybe_bytes {
-                let item: T = postcard::from_bytes(bytes.value())
-                    .context("failed to deserialize from postcard")?;
-                result = Some(item);
-            }
-        }
-        txn.commit().context("failed to commit write")?;
-        Ok(result)
-    }
-
     pub fn set_setting<T>(&self, key: &str, value: &T) -> Result<()>
     where
         T: Serialize,
@@ -302,5 +282,47 @@ impl Store {
         }
         .context("failed to serialize to JSON")?;
         Ok(json)
+    }
+
+    pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        let mut result = None;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let maybe_bytes = table.remove(key).context("failed to remove item")?;
+
+            if let Some(bytes) = maybe_bytes {
+                let item: T = postcard::from_bytes(bytes.value())
+                    .context("failed to deserialize from postcard")?;
+                result = Some(item);
+            }
+        }
+        txn.commit().context("failed to commit write")?;
+        Ok(result)
+    }
+
+    pub fn remove_many<T>(&self, keys: &[&str]) -> Result<Vec<T>>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        let mut result = Vec::new();
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            for key in keys {
+                let maybe_bytes = table.remove(key).context("failed to remove item")?;
+
+                if let Some(bytes) = maybe_bytes {
+                    let item: T = postcard::from_bytes(bytes.value())
+                        .context("failed to deserialize from postcard")?;
+                    result.push(item);
+                }
+            }
+        }
+        txn.commit().context("failed to commit write")?;
+        Ok(result)
     }
 }

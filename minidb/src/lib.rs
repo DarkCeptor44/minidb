@@ -262,6 +262,27 @@ impl Store {
         Ok(())
     }
 
+    pub fn update_many<T>(&self, items: &[T]) -> Result<()>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            for item in items {
+                if item.get_id().trim().is_empty() {
+                    return Err(anyhow!("id cannot be empty for update"));
+                }
+                let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+                table
+                    .insert(item.get_id(), bytes.as_slice())
+                    .context("failed to update item")?;
+            }
+        }
+        txn.commit().context("failed to commit to database")?;
+        Ok(())
+    }
+
     pub fn export_table<T>(&self, pretty: bool) -> Result<String>
     where
         T: TableModel,

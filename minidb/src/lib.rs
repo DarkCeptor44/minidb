@@ -249,7 +249,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn update<T>(&self, item: T) -> Result<()>
+    pub fn update<T>(&self, item: &T) -> Result<()>
     where
         T: TableModel,
     {

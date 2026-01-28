@@ -59,7 +59,7 @@ impl TableModel for Order {
 }
 
 impl CliDb {
-    pub fn place_order(&self, order: Order) -> Result<()> {
+    pub fn place_order(&self, order: &mut Order) -> Result<()> {
         if self.get::<Restaurant>(&order.restaurant_id)?.is_none() {
             return Err(anyhow!("Restaurant not found"));
         }
@@ -82,21 +82,21 @@ fn test_store_place_order() {
             .build()
             .expect("failed to create storage"),
     };
-    let r = Restaurant {
+    let mut r = Restaurant {
         id: "bca".to_string(),
     };
-    let r2 = Restaurant {
+    let mut r2 = Restaurant {
         id: "bca2".to_string(),
     };
-    db.insert(r).unwrap();
-    db.insert(r2).unwrap();
+    db.insert(&mut r).unwrap();
+    db.insert(&mut r2).unwrap();
 
-    let o = Order {
+    let mut o = Order {
         id: "abc".to_string(),
         restaurant_id: "bca".to_string(),
     };
 
-    db.place_order(o).unwrap();
+    db.place_order(&mut o).unwrap();
 
     let all = db.all_restaurants().unwrap();
     assert_eq!(all[0].id, "bca");

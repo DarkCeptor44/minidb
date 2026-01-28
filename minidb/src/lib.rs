@@ -130,7 +130,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn insert<T>(&self, mut item: T) -> Result<()>
+    pub fn insert<T>(&self, item: &mut T) -> Result<()>
     where
         T: TableModel,
     {
@@ -142,7 +142,7 @@ impl Store {
         let txn = self.db.begin_write().context("failed to begin write")?;
         {
             let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+            let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
             table
                 .insert(item.get_id(), bytes.as_slice())
                 .context("failed to insert into table")?;

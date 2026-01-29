@@ -19,6 +19,6 @@ serde_json.workspace = true
 [dev-dependencies]
 configura.workspace = true
 divan.workspace = true
-paste.workspace = true
+num-bigint.workspace = true
 rand.workspace = true
 tempfile.workspace = true

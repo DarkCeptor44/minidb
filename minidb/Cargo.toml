@@ -16,9 +16,11 @@ redb.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 
+# for -Zminimal-versions
+num.workspace = true
+
 [dev-dependencies]
 configura.workspace = true
 divan.workspace = true
-num-bigint.workspace = true
 rand.workspace = true
 tempfile.workspace = true

@@ -479,3 +479,16 @@ fn test_store_place_order() {
     assert_eq!(o2.id, "abc");
     assert_eq!(o2.restaurant_id, "bca");
 }
+
+#[test]
+fn test_store_is_empty() {
+    let temp_file = NamedTempFile::new().unwrap();
+    let db = CliDb {
+        storage: Store::builder(temp_file.path())
+            .table::<Restaurant>()
+            .build()
+            .expect("failed to create storage"),
+    };
+
+    assert!(db.is_empty::<Restaurant>().unwrap());
+}

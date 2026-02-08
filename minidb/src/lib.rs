@@ -3,7 +3,10 @@ pub use redb;
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
-use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition, WriteTransaction};
+use redb::{
+    Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
+    WriteTransaction,
+};
 use serde::{Deserialize, Serialize};
 
 const SETTINGS_TABLE: TableDefinition<&'static str, &[u8]> = TableDefinition::new("settings");
@@ -178,6 +181,17 @@ impl Store {
         }
         txn.commit().context("failed to commit to database")?;
         Ok(())
+    }
+
+    pub fn is_empty<T>(&self) -> Result<bool>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_read().context("failed to begin read")?;
+        let table = txn.open_table(T::TABLE).context("failed to open table")?;
+        table
+            .is_empty()
+            .context("failed to check if table is empty")
     }
 
     pub fn get<T>(&self, id: &str) -> Result<Option<T>>

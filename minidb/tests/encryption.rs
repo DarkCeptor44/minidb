@@ -45,7 +45,7 @@ impl TableModel for Order {
 }
 
 #[test]
-fn test_encryption_insert() {
+fn test_minidb_with_encryption_insert() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -73,7 +73,7 @@ fn test_encryption_insert() {
 }
 
 #[test]
-fn test_encryption_insert_many() {
+fn test_minidb_with_encryption_insert_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -103,7 +103,7 @@ fn test_encryption_insert_many() {
 }
 
 #[test]
-fn test_encryption_update() {
+fn test_minidb_with_encryption_update() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -139,7 +139,7 @@ fn test_encryption_update() {
 }
 
 #[test]
-fn test_encryption_update_many() {
+fn test_minidb_with_encryption_update_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -183,7 +183,7 @@ fn test_encryption_update_many() {
 }
 
 #[test]
-fn test_encryption_get() {
+fn test_minidb_with_encryption_get() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -214,7 +214,7 @@ fn test_encryption_get() {
 
 #[test]
 #[should_panic(expected = "restaurant is non-existent for some reason")]
-fn test_encryption_get_non_existent() {
+fn test_minidb_with_encryption_get_non_existent() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -238,7 +238,7 @@ fn test_encryption_get_non_existent() {
 }
 
 #[test]
-fn test_encryption_all() {
+fn test_minidb_with_encryption_all() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -263,7 +263,7 @@ fn test_encryption_all() {
 }
 
 #[test]
-fn test_encryption_all_from_empty_table() {
+fn test_minidb_with_encryption_all_from_empty_table() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -279,7 +279,7 @@ fn test_encryption_all_from_empty_table() {
 }
 
 #[test]
-fn test_encryption_remove() {
+fn test_minidb_with_encryption_remove() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -314,7 +314,7 @@ fn test_encryption_remove() {
 }
 
 #[test]
-fn test_encryption_remove_many() {
+fn test_minidb_with_encryption_remove_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -345,7 +345,7 @@ fn test_encryption_remove_many() {
 }
 
 #[test]
-fn test_encryption_for_each() {
+fn test_minidb_with_encryption_for_each() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -370,7 +370,7 @@ fn test_encryption_for_each() {
 }
 
 #[test]
-fn test_encryption_settings() {
+fn test_minidb_with_encryption_settings() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -399,7 +399,7 @@ fn test_encryption_settings() {
 }
 
 #[test]
-fn test_encryption_export_table() {
+fn test_minidb_with_encryption_export_table() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -427,7 +427,7 @@ fn test_encryption_export_table() {
     assert_eq!(exported, json);
 }
 #[test]
-fn test_encryption_is_empty() {
+fn test_minidb_with_encryption_is_empty() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()

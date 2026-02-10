@@ -76,7 +76,7 @@ impl CliDb {
 }
 
 #[test]
-fn test_store_insert() {
+fn test_minidb_insert() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -103,7 +103,7 @@ fn test_store_insert() {
 }
 
 #[test]
-fn test_store_insert_many() {
+fn test_minidb_insert_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -132,7 +132,7 @@ fn test_store_insert_many() {
 }
 
 #[test]
-fn test_store_update() {
+fn test_minidb_update() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -167,7 +167,7 @@ fn test_store_update() {
 }
 
 #[test]
-fn test_store_update_many() {
+fn test_minidb_update_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -210,7 +210,7 @@ fn test_store_update_many() {
 }
 
 #[test]
-fn test_store_get() {
+fn test_minidb_get() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -240,7 +240,7 @@ fn test_store_get() {
 
 #[test]
 #[should_panic(expected = "restaurant is non-existent for some reason")]
-fn test_store_get_non_existent() {
+fn test_minidb_get_non_existent() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -263,7 +263,7 @@ fn test_store_get_non_existent() {
 }
 
 #[test]
-fn test_store_all() {
+fn test_minidb_all() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -287,7 +287,7 @@ fn test_store_all() {
 }
 
 #[test]
-fn test_store_all_from_empty_table() {
+fn test_minidb_all_from_empty_table() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -302,7 +302,7 @@ fn test_store_all_from_empty_table() {
 }
 
 #[test]
-fn test_store_remove() {
+fn test_minidb_remove() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -336,7 +336,7 @@ fn test_store_remove() {
 }
 
 #[test]
-fn test_store_remove_many() {
+fn test_minidb_remove_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -366,7 +366,7 @@ fn test_store_remove_many() {
 }
 
 #[test]
-fn test_store_for_each() {
+fn test_minidb_for_each() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -390,7 +390,7 @@ fn test_store_for_each() {
 }
 
 #[test]
-fn test_store_settings() {
+fn test_minidb_settings() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
@@ -418,7 +418,7 @@ fn test_store_settings() {
 }
 
 #[test]
-fn test_store_export_table() {
+fn test_minidb_export_table() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
@@ -446,7 +446,7 @@ fn test_store_export_table() {
 }
 
 #[test]
-fn test_store_place_order() {
+fn test_minidb_place_order() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = CliDb {
         storage: MiniDB::builder(temp_file.path())
@@ -481,7 +481,7 @@ fn test_store_place_order() {
 }
 
 #[test]
-fn test_store_is_empty() {
+fn test_minidb_is_empty() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = CliDb {
         storage: MiniDB::builder(temp_file.path())

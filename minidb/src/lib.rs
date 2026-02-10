@@ -30,13 +30,13 @@ pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
     fn set_id(&mut self, id: String);
 }
 
-pub struct StoreBuilder {
+pub struct MiniDBBuilder {
     path: PathBuf,
     initializers: Vec<Initializer>,
     key_source: Option<KeySource>,
 }
 
-impl StoreBuilder {
+impl MiniDBBuilder {
     pub fn new<P>(path: P) -> Self
     where
         P: Into<PathBuf>,
@@ -66,7 +66,7 @@ impl StoreBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Store> {
+    pub fn build(self) -> Result<MiniDB> {
         let db = Database::builder()
             .create(&self.path)
             .context("failed to create database file")?;
@@ -85,7 +85,7 @@ impl StoreBuilder {
         }
         txn.commit().context("failed to commit bootstrap")?;
 
-        let mut store = Store { db, cipher: None };
+        let mut store = MiniDB { db, cipher: None };
 
         if let Some(source) = self.key_source {
             let key = match source {
@@ -116,17 +116,17 @@ pub enum KeySource {
     ExternalKeyProvider(Box<dyn Fn() -> ArgonKey>),
 }
 
-pub struct Store {
+pub struct MiniDB {
     db: Database,
     cipher: Option<XChaCha20Poly1305>,
 }
 
-impl Store {
-    pub fn builder<P>(path: P) -> StoreBuilder
+impl MiniDB {
+    pub fn builder<P>(path: P) -> MiniDBBuilder
     where
         P: Into<PathBuf>,
     {
-        StoreBuilder::new(path)
+        MiniDBBuilder::new(path)
     }
 
     // EMD OF BUILDERS

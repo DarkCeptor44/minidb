@@ -1,18 +1,18 @@
 use std::collections::HashSet;
 
 use anyhow::{Result, anyhow};
-use minidb::{Store, TableModel};
+use minidb::{MiniDB, TableModel};
 use rand::seq::IndexedRandom;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
 struct CliDb {
-    storage: Store,
+    storage: MiniDB,
 }
 
 impl std::ops::Deref for CliDb {
-    type Target = Store;
+    type Target = MiniDB;
 
     fn deref(&self) -> &Self::Target {
         &self.storage
@@ -78,7 +78,7 @@ impl CliDb {
 #[test]
 fn test_store_insert() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -107,7 +107,7 @@ fn test_store_insert_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -134,7 +134,7 @@ fn test_store_insert_many() {
 #[test]
 fn test_store_update() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -171,7 +171,7 @@ fn test_store_update_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -214,7 +214,7 @@ fn test_store_get() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -244,7 +244,7 @@ fn test_store_get_non_existent() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -267,7 +267,7 @@ fn test_store_all() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -289,7 +289,7 @@ fn test_store_all() {
 #[test]
 fn test_store_all_from_empty_table() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -306,7 +306,7 @@ fn test_store_remove() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -340,7 +340,7 @@ fn test_store_remove_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -370,7 +370,7 @@ fn test_store_for_each() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -392,7 +392,7 @@ fn test_store_for_each() {
 #[test]
 fn test_store_settings() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -422,7 +422,7 @@ fn test_store_export_table() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = Store::builder(temp_file.path())
+    let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .build()
@@ -449,7 +449,7 @@ fn test_store_export_table() {
 fn test_store_place_order() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = CliDb {
-        storage: Store::builder(temp_file.path())
+        storage: MiniDB::builder(temp_file.path())
             .table::<Restaurant>()
             .table::<Order>()
             .build()
@@ -484,7 +484,7 @@ fn test_store_place_order() {
 fn test_store_is_empty() {
     let temp_file = NamedTempFile::new().unwrap();
     let db = CliDb {
-        storage: Store::builder(temp_file.path())
+        storage: MiniDB::builder(temp_file.path())
             .table::<Restaurant>()
             .build()
             .expect("failed to create storage"),

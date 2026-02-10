@@ -10,6 +10,8 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+argon2.workspace = true
+chacha20poly1305.workspace = true
 cuid2.workspace = true
 postcard = { workspace = true, features = ["use-std"] }
 redb.workspace = true
@@ -20,7 +22,6 @@ serde_json.workspace = true
 num.workspace = true
 
 [dev-dependencies]
-configura.workspace = true
 divan.workspace = true
 rand.workspace = true
 tempfile.workspace = true

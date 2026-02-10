@@ -1,17 +1,27 @@
+mod encryption;
+mod testing;
+
 pub use redb;
 
 use std::path::PathBuf;
 
+use crate::encryption::{decrypt_bytes, derive_key_from_password, encrypt_bytes};
 use anyhow::{Context, Result, anyhow};
+use argon2::password_hash::{SaltString, rand_core::OsRng};
+use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
 use redb::{
     Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition,
     WriteTransaction,
 };
 use serde::{Deserialize, Serialize};
 
+const META_TABLE: TableDefinition<&'static str, &[u8]> = TableDefinition::new("meta");
 const SETTINGS_TABLE: TableDefinition<&'static str, &[u8]> = TableDefinition::new("settings");
 
+const META_KEY_SALT: &str = "salt";
+
 type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
+type ArgonKey = [u8; 32];
 
 pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
     const TABLE: TableDefinition<'_, &'static str, &[u8]>;
@@ -23,6 +33,7 @@ pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
 pub struct StoreBuilder {
     path: PathBuf,
     initializers: Vec<Initializer>,
+    key_source: Option<KeySource>,
 }
 
 impl StoreBuilder {
@@ -33,6 +44,7 @@ impl StoreBuilder {
         Self {
             path: path.into(),
             initializers: Vec::new(),
+            key_source: None,
         }
     }
 
@@ -49,6 +61,11 @@ impl StoreBuilder {
         self
     }
 
+    pub fn key_source(mut self, source: KeySource) -> Self {
+        self.key_source = Some(source);
+        self
+    }
+
     pub fn build(self) -> Result<Store> {
         let db = Database::builder()
             .create(&self.path)
@@ -56,6 +73,9 @@ impl StoreBuilder {
 
         let txn = db.begin_write().context("failed to begin bootstrap txn")?;
         {
+            let _ = txn
+                .open_table(META_TABLE)
+                .context("failed to init meta table")?;
             let _ = txn
                 .open_table(SETTINGS_TABLE)
                 .context("failed to init settings table")?;
@@ -65,12 +85,40 @@ impl StoreBuilder {
         }
         txn.commit().context("failed to commit bootstrap")?;
 
-        Ok(Store { db })
+        let mut store = Store { db, cipher: None };
+
+        if let Some(source) = self.key_source {
+            let key = match source {
+                KeySource::Password(pass) => {
+                    let salt = store
+                        .get_salt()
+                        .context("failed to get salt from meta table")?;
+
+                    derive_key_from_password(&pass, Some(salt), None)
+                        .context("failed to derive key")?
+                }
+
+                KeySource::PreDerived(key) => key,
+
+                KeySource::ExternalKeyProvider(provider_fn) => provider_fn(),
+            };
+
+            store.cipher = Some(XChaCha20Poly1305::new(&key.into()));
+        }
+
+        Ok(store)
     }
+}
+
+pub enum KeySource {
+    Password(String),
+    PreDerived(ArgonKey),
+    ExternalKeyProvider(Box<dyn Fn() -> ArgonKey>),
 }
 
 pub struct Store {
     db: Database,
+    cipher: Option<XChaCha20Poly1305>,
 }
 
 impl Store {
@@ -93,8 +141,16 @@ impl Store {
         let mut results = Vec::new();
         for item in table.iter()? {
             let (_key, value) = item?;
-            let decoded: T = postcard::from_bytes(value.value())
-                .context("failed to deserialize from postcard")?;
+
+            let decoded: T = if let Some(cipher) = &self.cipher {
+                let decrypted =
+                    decrypt_bytes(cipher, value.value()).context("failed to decrypt bytes")?;
+                postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+            } else {
+                postcard::from_bytes(value.value())
+                    .context("failed to deserialize from postcard")?
+            };
+
             results.push(decoded);
         }
 
@@ -131,7 +187,15 @@ impl Store {
 
         for item in table.iter()? {
             let (_, value) = item?;
-            let data: T = postcard::from_bytes(value.value())?;
+
+            let data: T = if let Some(cipher) = &self.cipher {
+                let decrypted =
+                    decrypt_bytes(cipher, value.value()).context("failed to decrypt data")?;
+                postcard::from_bytes(&decrypted).context("failed to deserialize postcard")?
+            } else {
+                postcard::from_bytes(value.value()).context("failed to deserialize postcard")?
+            };
+
             f(data);
         }
 
@@ -151,8 +215,15 @@ impl Store {
         {
             let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
             let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+
+            let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
+                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            } else {
+                bytes
+            };
+
             table
-                .insert(item.get_id(), bytes.as_slice())
+                .insert(item.get_id(), to_write.as_slice())
                 .context("failed to insert into table")?;
         }
         txn.commit().context("failed to commit to database")?;
@@ -174,8 +245,15 @@ impl Store {
 
                 let bytes =
                     postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+
+                let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
+                    encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                } else {
+                    bytes
+                };
+
                 table
-                    .insert(item.get_id(), bytes.as_slice())
+                    .insert(item.get_id(), to_write.as_slice())
                     .context("failed to insert into table")?;
             }
         }
@@ -202,6 +280,44 @@ impl Store {
         let table = txn.open_table(T::TABLE).context("failed to open table")?;
         let value = table.get(id).context("failed to get item from store")?;
 
+        let Some(bytes) = value else {
+            return Ok(None);
+        };
+
+        let item: T = if let Some(cipher) = &self.cipher {
+            let decrypted =
+                decrypt_bytes(cipher, bytes.value()).context("failed to decrypt data")?;
+            postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+        } else {
+            postcard::from_bytes(bytes.value()).context("failed to deserialize from postcard")?
+        };
+
+        Ok(Some(item))
+    }
+
+    fn get_salt(&self) -> Result<String> {
+        let value: Option<String> = self
+            .get_meta(META_KEY_SALT)
+            .context("failed to get salt from meta table")?;
+
+        if let Some(salt) = value {
+            Ok(salt)
+        } else {
+            let new_salt_string = SaltString::generate(&mut OsRng);
+            self.set_meta(META_KEY_SALT, &new_salt_string.to_string())
+                .context("failed to put salt in meta table")?;
+            Ok(new_salt_string.to_string())
+        }
+    }
+
+    fn get_meta<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: for<'a> Deserialize<'a>,
+    {
+        let txn = self.db.begin_read().context("failed to begin read")?;
+        let table = txn.open_table(META_TABLE).context("failed to open table")?;
+        let value = table.get(key).context("failed to get item from store")?;
+
         if let Some(bytes) = value {
             let item: T = postcard::from_bytes(bytes.value())
                 .context("failed to deserialize from postcard")?;
@@ -221,13 +337,35 @@ impl Store {
             .context("failed to open table")?;
         let value = table.get(key).context("failed to get item from store")?;
 
-        if let Some(bytes) = value {
-            let item: T = postcard::from_bytes(bytes.value())
-                .context("failed to deserialize from postcard")?;
-            Ok(Some(item))
+        let Some(bytes) = value else {
+            return Ok(None);
+        };
+
+        let item: T = if let Some(cipher) = &self.cipher {
+            let decrypted =
+                decrypt_bytes(cipher, bytes.value()).context("failed to decrypt data")?;
+            postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
         } else {
-            Ok(None)
+            postcard::from_bytes(bytes.value()).context("failed to deserialize from postcard")?
+        };
+
+        Ok(Some(item))
+    }
+
+    fn set_meta<T>(&self, key: &str, value: &T) -> Result<()>
+    where
+        T: Serialize,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        {
+            let mut table = txn.open_table(META_TABLE).context("failed to open table")?;
+            let bytes = postcard::to_stdvec(value).context("failed to serialize to postcard")?;
+            table
+                .insert(key, bytes.as_slice())
+                .context("failed to insert into table")?;
         }
+        txn.commit().context("failed to commit to database")?;
+        Ok(())
     }
 
     pub fn set_setting<T>(&self, key: &str, value: &T) -> Result<()>
@@ -240,8 +378,15 @@ impl Store {
                 .open_table(SETTINGS_TABLE)
                 .context("failed to open table")?;
             let bytes = postcard::to_stdvec(value).context("failed to serialize to postcard")?;
+
+            let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
+                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            } else {
+                bytes
+            };
+
             table
-                .insert(key, bytes.as_slice())
+                .insert(key, to_write.as_slice())
                 .context("failed to insert into table")?;
         }
         txn.commit().context("failed to commit to database")?;
@@ -260,8 +405,15 @@ impl Store {
         {
             let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
             let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+
+            let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
+                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            } else {
+                bytes
+            };
+
             table
-                .insert(item.get_id(), bytes.as_slice())
+                .insert(item.get_id(), to_write.as_slice())
                 .context("failed to update item")?;
         }
         txn.commit().context("failed to commit write to database")?;
@@ -280,8 +432,15 @@ impl Store {
                     return Err(anyhow!("id cannot be empty for update"));
                 }
                 let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+
+                let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
+                    encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                } else {
+                    bytes
+                };
+
                 table
-                    .insert(item.get_id(), bytes.as_slice())
+                    .insert(item.get_id(), to_write.as_slice())
                     .context("failed to update item")?;
             }
         }
@@ -314,8 +473,16 @@ impl Store {
             let maybe_bytes = table.remove(key).context("failed to remove item")?;
 
             if let Some(bytes) = maybe_bytes {
-                let item: T = postcard::from_bytes(bytes.value())
-                    .context("failed to deserialize from postcard")?;
+                let item: T = if let Some(cipher) = &self.cipher {
+                    let decrypted =
+                        decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
+                    postcard::from_bytes(&decrypted)
+                        .context("failed to deserialize from postcard")?
+                } else {
+                    postcard::from_bytes(bytes.value())
+                        .context("failed to deserialize from postcard")?
+                };
+
                 result = Some(item);
             }
         }
@@ -335,8 +502,16 @@ impl Store {
                 let maybe_bytes = table.remove(key).context("failed to remove item")?;
 
                 if let Some(bytes) = maybe_bytes {
-                    let item: T = postcard::from_bytes(bytes.value())
-                        .context("failed to deserialize from postcard")?;
+                    let item: T = if let Some(cipher) = &self.cipher {
+                        let decrypted = decrypt_bytes(cipher, bytes.value())
+                            .context("failed to decrypt bytes")?;
+                        postcard::from_bytes(&decrypted)
+                            .context("failed to deserialize from postcard")?
+                    } else {
+                        postcard::from_bytes(bytes.value())
+                            .context("failed to deserialize from postcard")?
+                    };
+
                     result.push(item);
                 }
             }

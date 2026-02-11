@@ -25,3 +25,11 @@ num.workspace = true
 divan.workspace = true
 rand.workspace = true
 tempfile.workspace = true
+
+[[bench]]
+name = "encryption"
+harness = false
+
+[[bench]]
+name = "minidb"
+harness = false

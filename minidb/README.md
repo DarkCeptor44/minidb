@@ -1,8 +1,59 @@
 # MiniDB
 
-MiniDB is a minimal-but-functional structured wrapper for [redb](https://crates.io/crates/redb). It uses Postcard to serialize/deserialize the structs to/from a byte-slice.
+[API Documentation](https://docs.rs/minidb) | [Workspace](../README.md)
+
+The main MiniDB crate providing a structured wrapper for [redb](https://crates.io/crates/redb) with serialization/deserialization.
+
+## Features
+
+* Automatic serialization/deserialization with [Postcard](https://crates.io/crates/postcard), using [serde](https://crates.io/crates/serde)
+* Structured key-value storage
+* Type-safe operations (mostly)
+* Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
+
+## Usage
+
+Full examples can be found in the [examples](./examples) directory.
+
+```rust
+#[derive(Table, Serialize, Deserialize)]
+#[minidb(name = "people")]
+struct Person {
+   #[key]
+   id: String,
+   name: String,
+   age: u8,
+}
+
+let db = MiniDB::builder("path/to/db")
+      .table::<Person>()
+      .build()
+      .unwrap();
+
+// insert a person
+let mut p = Person {
+   id: String::new(), // ID will be generated automatically, leave empty
+   name: "John Doe".to_string(),
+   age: 42,
+};
+db.insert(&mut p).unwrap();
+
+// get a person by ID
+let id = p.id.clone();
+let new_person: Option<Person> = db.get(&id).unwrap();
+
+if let Some(new_person) = new_person {
+   println!("Found person: {}", new_person.name);
+}
+```
+
+## Tests
+
+Both integration and unit tests are included. They can be run with `cargo test`.
 
 ## Benchmarks
+
+Benchmarks can be run with `cargo bench`, and the results look like this:
 
 ### Without Encryption
 
@@ -121,3 +172,7 @@ encryption                    fastest       │ slowest       │ median        
    ├─ 1000                    3.577 ms      │ 4.351 ms      │ 3.955 ms      │ 3.944 ms      │ 100     │ 100
    ╰─ 10000                   36.43 ms      │ 60.65 ms      │ 38.72 ms      │ 41.19 ms      │ 100     │ 100
 ```
+
+## License
+
+This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html).

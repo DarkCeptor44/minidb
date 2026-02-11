@@ -384,7 +384,7 @@ fn test_minidb_for_each() {
         .expect("failed to insert many restaurants");
 
     let mut count = 0;
-    db.for_each(|_r: Restaurant| count += 1)
+    db.for_each(|_r: &Restaurant| count += 1)
         .expect("failed to run for each");
     assert_eq!(count, N);
 }

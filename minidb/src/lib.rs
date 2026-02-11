@@ -180,7 +180,7 @@ impl MiniDB {
     pub fn for_each<T, F>(&self, mut f: F) -> Result<()>
     where
         T: TableModel,
-        F: FnMut(T),
+        F: FnMut(&T),
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
         let table = txn.open_table(T::TABLE)?;
@@ -196,7 +196,7 @@ impl MiniDB {
                 postcard::from_bytes(value.value()).context("failed to deserialize postcard")?
             };
 
-            f(data);
+            f(&data);
         }
 
         Ok(())

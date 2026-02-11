@@ -1,6 +1,7 @@
 mod encryption;
 mod testing;
 
+pub use minidb_macros::Table;
 pub use redb;
 
 use std::path::PathBuf;

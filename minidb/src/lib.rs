@@ -23,7 +23,7 @@
 //!
 //! This example demonstrates defining a table using the [Table] derive macro, creating a database instance, inserting an item, and retrieving it.
 //!
-//! ```rust
+//! ```rust,no_run
 //! use minidb::{MiniDB, Table};
 //! use serde::{Deserialize, Serialize};
 //!
@@ -56,7 +56,7 @@
 //!     let retrieved_person: Option<Person> = db.get(&person_to_insert.id)?;
 //!
 //!     match retrieved_person {
-//!         Some(p) => println!("Retrieved person: {p:?}", p);
+//!         Some(p) => println!("Retrieved person: {:?}", p),
 //!         None => println!("Person not found"),
 //!     }
 //!

@@ -11,6 +11,12 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 * Type-safe operations (mostly)
 * Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
 
+## MSRV
+
+| Version | MSRV |
+|---------|------|
+| 0.1.x   | 1.89 |
+
 ## Usage
 
 Full examples can be found in the [examples](./examples) directory.

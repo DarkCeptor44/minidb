@@ -128,7 +128,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
             .into();
     };
     let crate_path = match found_crate {
-        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Itself => quote!(minidb),
         FoundCrate::Name(name) => {
             let ident = Ident::new(&name, Span::call_site());
             quote!(#ident)

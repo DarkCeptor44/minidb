@@ -1,4 +1,80 @@
 //! # MiniDB
+//!
+//! A minimal-but-functional structured wrapper for [redb] with serialization/deserialization powered by [Postcard](postcard) and [Serde](serde).
+//!
+//! ## Key Features
+//!
+//! * Seamless serialization/deserialization with [Postcard](postcard), requiring the table models to implement [serde] `Serialize` and `Deserialize`.
+//! * **Type-Safe Storage:** Provides a structured way to store and retrieve Rust types.
+//! * **Optional Encryption:** Supports encryption via [XChaCha20Poly1305](chacha20poly1305).
+//! * **Procedural Macros:** Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition (provided by `minidb-macros`).
+//!
+//! ## Getting Started
+//!
+//! Add `minidb` and `serde` (with the `derive` feature) to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! minidb = "0.1"  # Replace with the latest version
+//! serde = { version = "1", features = ["derive"] }
+//! ```
+//!
+//! ## Basic Usage Example
+//!
+//! This example demonstrates defining a table using the [Table] derive macro, creating a database instance, inserting an item, and retrieving it.
+//!
+//! ```rust
+//! use minidb::{MiniDB, Table};
+//! use serde::{Deserialize, Serialize};
+//!
+//! #[derive(Table, Serialize, Deserialize, Debug)]
+//! #[minidb(name = "people")]
+//! struct Person {
+//!     #[key]
+//!     id: String,
+//!     name: String,
+//!     age: u8,
+//! }
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // create/open the database, registering the `Person` table
+//!     let db = MiniDB::builder("path/to/my_db.redb")
+//!         .table::<Person>()
+//!         .build()?;
+//!
+//!     // create a new Person (ID will be generated automatically so the field should be empty)
+//!     let mut person_to_insert = Person {
+//!         id: String::new(),
+//!         name: "John Doe".to_string(),
+//!         age: 31,
+//!     };
+//!
+//!     // insert the person into the database
+//!     db.insert(&mut person_to_insert)?;
+//!
+//!     // retrieve the person by ID
+//!     let retrieved_person: Option<Person> = db.get(&person_to_insert.id)?;
+//!
+//!     match retrieved_person {
+//!         Some(p) => println!("Retrieved person: {p:?}", p);
+//!         None => println!("Person not found"),
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Important Notes
+//!
+//! * **MSRV:** The Minimum Supported Rust Version for version 0.1.x is 1.89.
+//! * **Dependencies:** Relies heavily on [redb](https://crates.io/crates/redb) for core storage, [Postcard](https://crates.io/crates/postcard)/[Serde](https://crates.io/crates/serde) for serialization/deserialization, and potentially [chacha20poly1305](https://crates.io/crates/chacha20poly1305) for encryption.
+//! * **Procedural Macros:** Functionality like `#[derive(Table)]` comes from the separate [minidb-macros](https://crates.io/crates/minidb-macros) crate.
+//!
+//! See the individual module and item documentation for further details on specific components.
+//!
+//! ## License
+//!
+//! This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html) (LGPL v3).
 
 // Copyright (c) 2026, DarkCeptor44
 //

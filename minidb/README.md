@@ -17,6 +17,16 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 |---------|------|
 | 0.1.x   | 1.89 |
 
+## Installation
+
+In your `Cargo.toml`:
+
+```toml
+[dependencies]
+minidb = "0.1"  # or the latest version
+serde = { version = "1", features = ["derive"] }  # needed for minidb
+```
+
 ## Usage
 
 Full examples can be found in the [examples](./examples) directory.

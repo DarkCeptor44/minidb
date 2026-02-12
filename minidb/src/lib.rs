@@ -15,7 +15,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! minidb = "0.1"  # Replace with the latest version
+//! minidb = { version = "0.1", features = ["macros"] } # Or just "0.1" if you don't need the derive macros
 //! serde = { version = "1", features = ["derive"] }
 //! ```
 //!
@@ -23,7 +23,9 @@
 //!
 //! This example demonstrates defining a table using the [Table] derive macro, creating a database instance, inserting an item, and retrieving it.
 //!
-//! ```rust,no_run
+//! **Note**: This example requires the `macros` feature.
+//!
+//! ```rust,ignore
 //! use minidb::{MiniDB, Table};
 //! use serde::{Deserialize, Serialize};
 //!
@@ -68,7 +70,7 @@
 //!
 //! * **MSRV:** The Minimum Supported Rust Version for version 0.1.x is 1.89.
 //! * **Dependencies:** Relies heavily on [redb](https://crates.io/crates/redb) for core storage, [Postcard](https://crates.io/crates/postcard)/[Serde](https://crates.io/crates/serde) for serialization/deserialization, and potentially [chacha20poly1305](https://crates.io/crates/chacha20poly1305) for encryption.
-//! * **Procedural Macros:** Functionality like `#[derive(Table)]` comes from the separate [minidb-macros](https://crates.io/crates/minidb-macros) crate.
+//! * **Procedural Macros:** Functionality like `#[derive(Table)]` comes from the separate [minidb-macros](https://crates.io/crates/minidb-macros) crate, which can be enabled with the `macros` feature.
 //!
 //! See the individual module and item documentation for further details on specific components.
 //!
@@ -94,6 +96,7 @@
 mod encryption;
 mod testing;
 
+#[cfg(feature = "macros")]
 pub use minidb_macros::Table;
 pub use redb;
 

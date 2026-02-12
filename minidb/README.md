@@ -23,13 +23,15 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-minidb = "0.1"  # or the latest version
+minidb = { version = "0.1", features = ["macros"] } # or the latest version
 serde = { version = "1", features = ["derive"] }  # needed for minidb
 ```
 
 ## Usage
 
 Full examples can be found in the [examples](./examples) directory.
+
+**Note:** The `#[derive(Table)]` macro requires the `macros` feature to be enabled.
 
 ```rust
 #[derive(Table, Serialize, Deserialize)]

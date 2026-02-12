@@ -1,14 +1,36 @@
-use minidb::{MiniDB, Table};
+use minidb::{MiniDB, TableModel};
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
-#[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
-#[minidb(name = "people")]
+// If you have the `macros` feature enabled, you can use the derive macro like this:
+
+// #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+// #[minidb(name = "people")]
+// struct Person {
+//     #[key]
+//     id: String,
+//     name: String,
+//     age: u8,
+// }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Person {
-    #[key]
     id: String,
     name: String,
     age: u8,
+}
+
+impl TableModel for Person {
+    const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> =
+        redb::TableDefinition::new("people");
+
+    fn get_id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
 }
 
 fn main() {

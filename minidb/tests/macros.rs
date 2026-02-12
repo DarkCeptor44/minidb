@@ -9,6 +9,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(feature = "macros")]
+
 use minidb::{MiniDB, Table};
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;

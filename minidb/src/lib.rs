@@ -1,3 +1,9 @@
+//! # MiniDB
+
+#![forbid(unsafe_code)]
+#![warn(clippy::pedantic, missing_docs)]
+#![allow(clippy::doc_markdown)]
+
 mod encryption;
 mod testing;
 
@@ -52,9 +58,13 @@ type ArgonKey = [u8; 32];
 /// }
 /// ```
 pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
+    /// The table definition
     const TABLE: TableDefinition<'_, &'static str, &[u8]>;
 
+    /// Returns the id of the table model
     fn get_id(&self) -> &str;
+
+    /// Sets the id of the table model
     fn set_id(&mut self, id: String);
 }
 
@@ -136,6 +146,7 @@ impl MiniDBBuilder {
     /// let db = MiniDB::builder("test.redb")
     ///     .table::<Person>();
     /// ```
+    #[must_use]
     pub fn table<T>(mut self) -> Self
     where
         T: TableModel + 'static,
@@ -184,6 +195,7 @@ impl MiniDBBuilder {
     ///     // skipping table registering for convenience
     ///     .key_source(KeySource::ExternalKeyProvider(Box::new(key_provider)));
     /// ```
+    #[must_use]
     pub fn key_source(mut self, source: KeySource) -> Self {
         self.key_source = Some(source);
         self

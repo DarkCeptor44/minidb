@@ -97,9 +97,11 @@ mod builder;
 mod encryption;
 mod model;
 mod testing;
+mod transaction;
 
 pub use crate::builder::{KeySource, MiniDBBuilder};
 pub use crate::model::TableModel;
+pub use crate::transaction::Transaction;
 #[cfg(feature = "macros")]
 pub use minidb_macros::Table;
 pub use redb;
@@ -631,6 +633,42 @@ impl MiniDB {
         }
         txn.commit().context("failed to commit to database")?;
         Ok(())
+    }
+
+    /// Starts a write transaction.
+    ///
+    /// This allows grouping multiple operations (insert, update, remove) into a single atomic transaction.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the transaction fails to begin, if the closure returns an error, or if the commit fails.
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// db.transaction(|txn| {
+    ///     txn.insert(&mut user1)?;
+    ///     txn.update(&mut user2)?;
+    ///     txn.remove("user3_id")?;
+    ///     Ok(())
+    /// }).unwrap();
+    /// ```
+    pub fn transaction<F, R>(&self, f: F) -> Result<R>
+    where
+        F: FnOnce(&Transaction) -> Result<R>,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        let transaction = Transaction {
+            txn,
+            cipher: self.cipher.as_ref(),
+        };
+
+        let result = f(&transaction)?;
+        transaction
+            .txn
+            .commit()
+            .context("failed to commit transaction")?;
+        Ok(result)
     }
 
     /// Updates an item in the table

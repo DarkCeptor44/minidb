@@ -503,3 +503,31 @@ fn test_minidb_is_empty() {
 
     assert!(db.is_empty::<Restaurant>().unwrap());
 }
+
+#[test]
+fn test_minidb_transaction() {
+    let temp_file = NamedTempFile::new().expect("failed to create temp file");
+    let db = MiniDB::builder(temp_file.path())
+        .table::<Restaurant>()
+        .table::<Order>()
+        .build()
+        .expect("failed to build store");
+
+    let mut r = Restaurant {
+        id: "rest1".to_string(),
+    };
+    let mut o = Order {
+        id: "order1".to_string(),
+        restaurant_id: "rest1".to_string(),
+    };
+
+    db.transaction(|txn| {
+        txn.insert(&mut r)?;
+        txn.insert(&mut o)?;
+        Ok(())
+    })
+    .expect("transaction failed");
+
+    assert!(db.get::<Restaurant>("rest1").unwrap().is_some());
+    assert!(db.get::<Order>("order1").unwrap().is_some());
+}

@@ -573,3 +573,38 @@ fn set_setting(b: Bencher) {
         db.set_setting(key, &1234).unwrap();
     });
 }
+
+#[divan::bench]
+fn transaction(b: Bencher) {
+    b.with_inputs(|| {
+        let temp_file = NamedTempFile::new().unwrap();
+        let db = MiniDB::builder(temp_file.path())
+            .table::<Person>()
+            .key_source(KeySource::PreDerived(KEY))
+            .build()
+            .unwrap();
+
+        let p1 = Person {
+            id: String::new(),
+            name: "John Doe".to_string(),
+            age: 31,
+        };
+        let mut p2 = Person {
+            id: "id1".to_string(),
+            name: "Jane Doe".to_string(),
+            age: 26,
+        };
+
+        db.insert(&mut p2).unwrap();
+
+        (temp_file, db, p1, p2.id)
+    })
+    .bench_refs(|(_temp_file, db, p1, p2_id)| {
+        db.transaction(|txn| {
+            txn.insert(p1)?;
+            txn.remove::<Person>(p2_id)?;
+            Ok(())
+        })
+        .unwrap();
+    });
+}

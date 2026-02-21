@@ -120,6 +120,7 @@ minidb                        fastest       │ slowest       │ median        
 │  ├─ 1000                    3.745 ms      │ 6.356 ms      │ 4.287 ms      │ 4.419 ms      │ 100     │ 100
 │  ╰─ 10000                   18.58 ms      │ 21.13 ms      │ 19.62 ms      │ 19.7 ms       │ 100     │ 100
 ├─ set_setting                460.3 µs      │ 919.9 µs      │ 516.5 µs      │ 552.6 µs      │ 100     │ 100
+├─ transaction                538.7 µs      │ 1.213 ms      │ 602.4 µs      │ 655.7 µs      │ 100     │ 100
 ├─ update (existing db)       456.9 µs      │ 996.9 µs      │ 482.7 µs      │ 515.5 µs      │ 100     │ 100
 ├─ update (fresh db)          520.8 µs      │ 939.1 µs      │ 576.8 µs      │ 608 µs        │ 100     │ 100
 ├─ update_many (existing db)                │               │               │               │         │
@@ -179,6 +180,7 @@ encryption                    fastest       │ slowest       │ median        
 │  ├─ 1000                    5.931 ms      │ 8.27 ms       │ 6.817 ms      │ 6.849 ms      │ 100     │ 100
 │  ╰─ 10000                   38.94 ms      │ 55.53 ms      │ 42.19 ms      │ 42.62 ms      │ 100     │ 100
 ├─ set_setting                521.6 µs      │ 988.8 µs      │ 648.9 µs      │ 675.2 µs      │ 100     │ 100
+├─ transaction                530.9 µs      │ 3.467 ms      │ 586.1 µs      │ 653.7 µs      │ 100     │ 100
 ├─ update (existing db)       531.6 µs      │ 980 µs        │ 628.2 µs      │ 657.4 µs      │ 100     │ 100
 ├─ update (fresh db)          618.8 µs      │ 1.251 ms      │ 719.9 µs      │ 743.5 µs      │ 100     │ 100
 ├─ update_many (existing db)                │               │               │               │         │

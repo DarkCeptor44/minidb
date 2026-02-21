@@ -60,13 +60,11 @@ fn insert_into_fresh_db(b: Bencher) {
             .build()
             .unwrap();
 
-        let mut p = Person {
+        let p = Person {
             id: String::new(),
             name: "John Doe".to_string(),
             age: 31,
         };
-
-        p.id = String::new();
 
         (temp_file, db, p)
     })

@@ -531,3 +531,28 @@ fn test_minidb_transaction() {
     assert!(db.get::<Restaurant>("rest1").unwrap().is_some());
     assert!(db.get::<Order>("order1").unwrap().is_some());
 }
+
+#[test]
+fn test_minidb_view_all() {
+    let temp_file = NamedTempFile::new().expect("failed to create temp file");
+    let db = MiniDB::builder(temp_file.path())
+        .table::<Restaurant>()
+        .build()
+        .expect("failed to build store");
+
+    let mut rests = Vec::new();
+    for _ in 0..110 {
+        rests.push(Restaurant { id: String::new() });
+    }
+
+    db.insert_many(&mut rests)
+        .expect("failed to insert many restaurants");
+
+    let first_five: Vec<Restaurant> = db
+        .view_all::<Restaurant, _, _>(|iter| {
+            iter.skip(100).take(5).collect::<Result<Vec<_>>>().unwrap()
+        })
+        .expect("failed to get first five");
+
+    assert_eq!(first_five.len(), 5);
+}

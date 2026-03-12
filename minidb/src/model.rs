@@ -9,7 +9,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use redb::TableDefinition;
+use std::marker::PhantomData;
+
+use crate::encryption::decrypt_bytes;
+use anyhow::Context;
+use chacha20poly1305::XChaCha20Poly1305;
+use redb::{Range, TableDefinition};
 use serde::{Deserialize, Serialize};
 
 /// A table model. A table model is a struct that implements the [`TableModel`] trait.
@@ -48,4 +53,56 @@ pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
 
     /// Sets the id of the table model
     fn set_id(&mut self, id: String);
+}
+
+pub struct TableIterator<'a, T> {
+    inner: Range<'a, &'static str, &'static [u8]>,
+    cipher: Option<&'a XChaCha20Poly1305>,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<'a, T> TableIterator<'a, T> {
+    pub fn new(inner: Range<'a, &'static str, &'static [u8]>) -> Self {
+        Self {
+            inner,
+            cipher: None,
+            _phantom: PhantomData,
+        }
+    }
+
+    #[must_use]
+    pub fn with_cipher(mut self, cipher: &'a XChaCha20Poly1305) -> Self {
+        self.cipher = Some(cipher);
+        self
+    }
+}
+
+impl<T> Iterator for TableIterator<'_, T>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    type Item = anyhow::Result<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.inner.next()?;
+
+        match result {
+            Ok((_key, value)) => {
+                let bytes = if let Some(cipher) = &self.cipher {
+                    match decrypt_bytes(cipher, value.value()).context("failed to decrypt bytes") {
+                        Ok(d) => d,
+                        Err(e) => return Some(Err(e)),
+                    }
+                } else {
+                    value.value().to_vec()
+                };
+
+                match postcard::from_bytes(&bytes) {
+                    Ok(item) => Some(Ok(item)),
+                    Err(e) => Some(Err(e.into())),
+                }
+            }
+            Err(e) => Some(Err(e.into())),
+        }
+    }
 }

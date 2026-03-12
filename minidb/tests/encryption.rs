@@ -11,6 +11,7 @@
 
 use std::collections::HashSet;
 
+use anyhow::Result;
 use minidb::{KeySource, MiniDB, TableModel};
 use rand::seq::IndexedRandom;
 use redb::TableDefinition;
@@ -447,4 +448,30 @@ fn test_minidb_with_encryption_is_empty() {
         .expect("failed to create storage");
 
     assert!(db.is_empty::<Restaurant>().unwrap());
+}
+
+#[test]
+fn test_minidb_with_encryption_view_all() {
+    let temp_file = NamedTempFile::new().expect("failed to create temp file");
+    let db = MiniDB::builder(temp_file.path())
+        .table::<Restaurant>()
+        .key_source(KeySource::PreDerived(KEY))
+        .build()
+        .expect("failed to build store");
+
+    let mut rests = Vec::new();
+    for _ in 0..110 {
+        rests.push(Restaurant { id: String::new() });
+    }
+
+    db.insert_many(&mut rests)
+        .expect("failed to insert many restaurants");
+
+    let first_five: Vec<Restaurant> = db
+        .view_all::<Restaurant, _, _>(|iter| {
+            iter.skip(100).take(5).collect::<Result<Vec<_>>>().unwrap()
+        })
+        .expect("failed to get first five");
+
+    assert_eq!(first_five.len(), 5);
 }

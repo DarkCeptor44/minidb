@@ -100,7 +100,7 @@ mod testing;
 mod transaction;
 
 pub use crate::builder::{KeySource, MiniDBBuilder};
-pub use crate::model::TableModel;
+pub use crate::model::{TableIterator, TableModel};
 pub use crate::transaction::Transaction;
 #[cfg(feature = "macros")]
 pub use minidb_macros::Table;
@@ -922,5 +922,17 @@ impl MiniDB {
         }
         txn.commit().context("failed to commit write")?;
         Ok(result)
+    }
+
+    pub fn view_all<T, F, R>(&self, f: F) -> Result<R>
+    where
+        T: TableModel,
+        F: FnOnce(TableIterator<'_, T>) -> R,
+    {
+        let txn = self.db.begin_read().context("failed to begin read")?;
+        let table = txn.open_table(T::TABLE).context("failed to open table")?;
+        let iter = TableIterator::new(table.iter()?);
+
+        Ok(f(iter))
     }
 }

@@ -257,6 +257,40 @@ impl MiniDB {
         Ok(())
     }
 
+    /// Exports a table as a JSON string
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `pretty` - Whether to pretty print the JSON
+    ///
+    /// ## Returns
+    ///
+    /// * `String` - The JSON string
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let json = db.export_table::<Person>(true).unwrap();
+    /// ```
+    pub fn export_table<T>(&self, pretty: bool) -> Result<String>
+    where
+        T: TableModel,
+    {
+        let all_items: Vec<T> = self.all().context("failed to get all items")?;
+        let json = if pretty {
+            serde_json::to_string_pretty(&all_items)
+        } else {
+            serde_json::to_string(&all_items)
+        }
+        .context("failed to serialize to JSON")?;
+        Ok(json)
+    }
+
     /// Iterates over all items in a table and applies a function to each item
     ///
     /// ## Arguments
@@ -576,6 +610,116 @@ impl MiniDB {
         Ok(Some(item))
     }
 
+    /// Removes an item from the table
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `key` - The key of the item to remove
+    ///
+    /// ## Returns
+    ///
+    /// * `Ok(Some(item))` if the item was removed
+    /// * `Ok(None)` if the item was not found
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let removed_person = db.remove::<Person>("person_id").unwrap().unwrap();
+    ///
+    /// // or
+    ///
+    /// let removed_person: Option<Person> = db.remove("person_id").unwrap();
+    /// if let Some(person) = removed_person {
+    ///     println!("Person name: {}", person.name);
+    /// }
+    /// ```
+    pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        let mut result = None;
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let maybe_bytes = table.remove(key).context("failed to remove item")?;
+
+            if let Some(bytes) = maybe_bytes {
+                let item: T = if let Some(cipher) = &self.cipher {
+                    let decrypted =
+                        decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
+                    postcard::from_bytes(&decrypted)
+                        .context("failed to deserialize from postcard")?
+                } else {
+                    postcard::from_bytes(bytes.value())
+                        .context("failed to deserialize from postcard")?
+                };
+
+                result = Some(item);
+            }
+        }
+        txn.commit().context("failed to commit write")?;
+        Ok(result)
+    }
+
+    /// Removes multiple items from the table
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `keys` - The keys of the items to remove
+    ///
+    /// ## Returns
+    ///
+    /// * `Vec<T>` - The items that were removed
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let removed_people = db.remove_many::<Person>(&["person_id1", "person_id2", ...]).unwrap();
+    ///
+    /// // or
+    ///
+    /// let removed_people: Vec<Person> = db.remove_many(&["person_id1", "person_id2", ...]).unwrap();
+    /// ```
+    pub fn remove_many<T>(&self, keys: &[&str]) -> Result<Vec<T>>
+    where
+        T: TableModel,
+    {
+        let txn = self.db.begin_write().context("failed to begin write")?;
+        let mut result = Vec::new();
+        {
+            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            for key in keys {
+                let maybe_bytes = table.remove(key).context("failed to remove item")?;
+
+                if let Some(bytes) = maybe_bytes {
+                    let item: T = if let Some(cipher) = &self.cipher {
+                        let decrypted = decrypt_bytes(cipher, bytes.value())
+                            .context("failed to decrypt bytes")?;
+                        postcard::from_bytes(&decrypted)
+                            .context("failed to deserialize from postcard")?
+                    } else {
+                        postcard::from_bytes(bytes.value())
+                            .context("failed to deserialize from postcard")?
+                    };
+
+                    result.push(item);
+                }
+            }
+        }
+        txn.commit().context("failed to commit write")?;
+        Ok(result)
+    }
+
     /// Sets an item in the meta table
     pub(crate) fn set_meta<T>(&self, key: &str, value: &T) -> Result<()>
     where
@@ -778,150 +922,6 @@ impl MiniDB {
         }
         txn.commit().context("failed to commit to database")?;
         Ok(())
-    }
-
-    /// Exports a table as a JSON string
-    ///
-    /// ## Arguments
-    ///
-    /// * `T` - The table model
-    /// * `pretty` - Whether to pretty print the JSON
-    ///
-    /// ## Returns
-    ///
-    /// * `String` - The JSON string
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
-    ///
-    /// ## Example
-    ///
-    /// ```rust,ignore
-    /// let json = db.export_table::<Person>(true).unwrap();
-    /// ```
-    pub fn export_table<T>(&self, pretty: bool) -> Result<String>
-    where
-        T: TableModel,
-    {
-        let all_items: Vec<T> = self.all().context("failed to get all items")?;
-        let json = if pretty {
-            serde_json::to_string_pretty(&all_items)
-        } else {
-            serde_json::to_string(&all_items)
-        }
-        .context("failed to serialize to JSON")?;
-        Ok(json)
-    }
-
-    /// Removes an item from the table
-    ///
-    /// ## Arguments
-    ///
-    /// * `T` - The table model
-    /// * `key` - The key of the item to remove
-    ///
-    /// ## Returns
-    ///
-    /// * `Ok(Some(item))` if the item was removed
-    /// * `Ok(None)` if the item was not found
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
-    ///
-    /// ## Example
-    ///
-    /// ```rust,ignore
-    /// let removed_person = db.remove::<Person>("person_id").unwrap().unwrap();
-    ///
-    /// // or
-    ///
-    /// let removed_person: Option<Person> = db.remove("person_id").unwrap();
-    /// if let Some(person) = removed_person {
-    ///     println!("Person name: {}", person.name);
-    /// }
-    /// ```
-    pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
-    where
-        T: TableModel,
-    {
-        let txn = self.db.begin_write().context("failed to begin write")?;
-        let mut result = None;
-        {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let maybe_bytes = table.remove(key).context("failed to remove item")?;
-
-            if let Some(bytes) = maybe_bytes {
-                let item: T = if let Some(cipher) = &self.cipher {
-                    let decrypted =
-                        decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
-                    postcard::from_bytes(&decrypted)
-                        .context("failed to deserialize from postcard")?
-                } else {
-                    postcard::from_bytes(bytes.value())
-                        .context("failed to deserialize from postcard")?
-                };
-
-                result = Some(item);
-            }
-        }
-        txn.commit().context("failed to commit write")?;
-        Ok(result)
-    }
-
-    /// Removes multiple items from the table
-    ///
-    /// ## Arguments
-    ///
-    /// * `T` - The table model
-    /// * `keys` - The keys of the items to remove
-    ///
-    /// ## Returns
-    ///
-    /// * `Vec<T>` - The items that were removed
-    ///
-    /// ## Errors
-    ///
-    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
-    ///
-    /// ## Example
-    ///
-    /// ```rust,ignore
-    /// let removed_people = db.remove_many::<Person>(&["person_id1", "person_id2", ...]).unwrap();
-    ///
-    /// // or
-    ///
-    /// let removed_people: Vec<Person> = db.remove_many(&["person_id1", "person_id2", ...]).unwrap();
-    /// ```
-    pub fn remove_many<T>(&self, keys: &[&str]) -> Result<Vec<T>>
-    where
-        T: TableModel,
-    {
-        let txn = self.db.begin_write().context("failed to begin write")?;
-        let mut result = Vec::new();
-        {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            for key in keys {
-                let maybe_bytes = table.remove(key).context("failed to remove item")?;
-
-                if let Some(bytes) = maybe_bytes {
-                    let item: T = if let Some(cipher) = &self.cipher {
-                        let decrypted = decrypt_bytes(cipher, bytes.value())
-                            .context("failed to decrypt bytes")?;
-                        postcard::from_bytes(&decrypted)
-                            .context("failed to deserialize from postcard")?
-                    } else {
-                        postcard::from_bytes(bytes.value())
-                            .context("failed to deserialize from postcard")?
-                    };
-
-                    result.push(item);
-                }
-            }
-        }
-        txn.commit().context("failed to commit write")?;
-        Ok(result)
     }
 
     /// Returns an iterator over all items in a table, allowing for custom processing

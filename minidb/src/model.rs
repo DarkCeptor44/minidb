@@ -55,6 +55,7 @@ pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
     fn set_id(&mut self, id: String);
 }
 
+/// An iterator over a table's items, with optional decryption
 pub struct TableIterator<'a, T> {
     inner: Range<'a, &'static str, &'static [u8]>,
     cipher: Option<&'a XChaCha20Poly1305>,
@@ -62,6 +63,16 @@ pub struct TableIterator<'a, T> {
 }
 
 impl<'a, T> TableIterator<'a, T> {
+    /// Creates a new [`TableIterator`]
+    ///
+    /// ## Arguments
+    ///
+    /// * `inner` - The range of items from the redb table
+    ///
+    /// ## Returns
+    ///
+    /// A new [`TableIterator`]
+    #[must_use]
     pub fn new(inner: Range<'a, &'static str, &'static [u8]>) -> Self {
         Self {
             inner,
@@ -70,6 +81,15 @@ impl<'a, T> TableIterator<'a, T> {
         }
     }
 
+    /// Adds a cipher to the iterator for decryption
+    ///
+    /// ## Arguments
+    ///
+    /// * `cipher` - The cipher to use for decryption
+    ///
+    /// ## Returns
+    ///
+    /// The [`TableIterator`] with the cipher added
     #[must_use]
     pub fn with_cipher(mut self, cipher: &'a XChaCha20Poly1305) -> Self {
         self.cipher = Some(cipher);

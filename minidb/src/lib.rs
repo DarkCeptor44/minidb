@@ -924,6 +924,28 @@ impl MiniDB {
         Ok(result)
     }
 
+    /// Returns an iterator over all items in a table, allowing for custom processing
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `f` - The function that processes the iterator
+    ///
+    /// ## Returns
+    ///
+    /// A [`Result`] containing the result of the processing function `f`
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if the encryption/serialization fails
+    ///
+    /// ## Example
+    ///
+    /// ```rust,ignore
+    /// let first_five: Vec<Person> = db.view_all::<Person, _, _>(|iter| {
+    ///     iter.take(5).collect::<Result<Vec<_>>>().unwrap()
+    /// }).unwrap();
+    /// ```
     pub fn view_all<T, F, R>(&self, f: F) -> Result<R>
     where
         T: TableModel,
@@ -931,7 +953,11 @@ impl MiniDB {
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
         let table = txn.open_table(T::TABLE).context("failed to open table")?;
-        let iter = TableIterator::new(table.iter()?);
+        let mut iter = TableIterator::new(table.iter()?);
+
+        if let Some(cipher) = &self.cipher {
+            iter = iter.with_cipher(cipher);
+        }
 
         Ok(f(iter))
     }

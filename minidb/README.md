@@ -195,4 +195,4 @@ encryption                    fastest       │ slowest       │ median        
 
 ## License
 
-This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html).
+This project is licensed under the Mozilla Public License, version 2.0. See the [LICENSE](LICENSE) file for details.

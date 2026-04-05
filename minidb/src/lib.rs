@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_docs, missing_debug_implementations)]
 #![allow(clippy::doc_markdown)]
@@ -80,18 +84,7 @@
 //!
 //! ## License
 //!
-//! This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html) (LGPL v3).
-
-// Copyright (c) 2026, DarkCeptor44
-//
-// This file is licensed under the GNU Lesser General Public License
-// (either version 3 or, at your option, any later version).
-//
-// This software comes without any warranty, express or implied. See the
-// GNU Lesser General Public License for details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this software. If not, see <https://www.gnu.org/licenses/>.
+//! Licensed under the Mozilla Public License 2.0 ([MPL-2.0](https://www.mozilla.org/en-US/MPL/2.0/)).
 
 mod builder;
 mod encryption;

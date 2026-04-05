@@ -1,17 +1,10 @@
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 //! Dummy documentation block
 //!
 //! proc-macro crates don't have generated rustdocs
-
-// Copyright (c) 2026, DarkCeptor44
-//
-// This file is licensed under the GNU Lesser General Public License
-// (either version 3 or, at your option, any later version).
-//
-// This software comes without any warranty, express or implied. See the
-// GNU Lesser General Public License for details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this software. If not, see <https://www.gnu.org/licenses/>.
 
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic, missing_debug_implementations, missing_docs)]

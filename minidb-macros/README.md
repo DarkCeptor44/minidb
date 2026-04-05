@@ -1,40 +1,18 @@
 # minidb-macros
 
-This crate provides procedural macros for the `minidb` crate
+[API Documentation](https://docs.rs/minidb) | [Workspace](../README.md)
 
-## Table
+Procedural macros for MiniDB
 
-Derives `AsTable` for a struct
+## Features
 
-### Struct Attributes
+* Derive macros for MiniDB-compatible types
+* Automatic implementation of necessary traits
 
-* `#[minidb(name = "custom_name")]` - Sets a different name for the struct/table. Names get converted to `snake_case`
+## Usage
 
-### Field Attributes
-
-* `#[key]` - Sets the field as a primary key
-* `#[foreign_key]` - Sets the field as a foreign key to the referenced table's primary key, for example:
-
-```rust
-#[foreign_key]
-customer_id: Id<Person>, // references the primary key of the Person table
-```
-
-### Example
-
-```rust
-use minidb::Table;
-
-#[derive(Table)]
-#[minidb(name = "people")]
-struct Person {
-    #[key]
-    id: Id<Self>,
-    name: String,
-    age: u8,
-}
-```
+This crate is used as a dependency of the `minidb` crate
 
 ## License
 
-This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html).
+This project is licensed under the Mozilla Public License, version 2.0. See the [LICENSE](LICENSE) file for details.

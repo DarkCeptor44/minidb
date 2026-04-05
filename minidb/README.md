@@ -1,215 +1,229 @@
-# minidb
+# MiniDB
 
-Minimalistic file-based database written in Rust
+[API Documentation](https://docs.rs/minidb) | [Workspace](../README.md)
 
-## Features
+The main MiniDB crate providing a structured wrapper for [redb](https://crates.io/crates/redb) with serialization/deserialization.
 
-* File-based, this means the tables are sub-directories and the records are files
-* Uses [bitcode](https://crates.io/crates/bitcode) as the binary format to store the data
-* Uses [cuid2](https://crates.io/crates/cuid2) slugs for record IDs
-* Easy table definition with procedural macros
-* Built with interprocess file locks for thread-safety
-* Relies on [serde](https://crates.io/crates/serde) for serialization and deserialization of the tables
+## Key Features
 
-## Why not async
+* ACID compliant and whatever else [redb](https://crates.io/crates/redb) claims
+* Automatic serialization/deserialization with [Postcard](https://crates.io/crates/postcard), using [serde](https://crates.io/crates/serde)
+* Structured key-value storage with automatic [CUID2](https://crates.io/crates/cuid2) IDs
+* Type-safe operations (mostly)
+* Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
+* Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
+* Re-exports [serde](https://crates.io/crates/serde) for convenience
+* Re-exports [redb](https://crates.io/crates/redb) and some direct/less-opinionated methods for advanced usage
+* "Relational" (requires manual management of foreign keys)
 
-The database was initially built without async, then I thought about it and wrote async versions of each filesystem-related function in [minidb-utils](https://docs.rs/minidb-utils) but ultimately decided not to do it because there's no proper benchmark for concurrent async yet, I'd assume the overhead from async wouldn't be worth it and the API would be more complex, for example adding a table to the database instance could go from:
+## MSRV
 
-```rust
-let db = Database::builder().path(path).table::<Person>().build().unwrap();
-```
-
-To:
-
-```rust
-let db = Database::builder().path(path).await.table::<Person>().await.build().await.unwrap();
-```
-
-However, it's not impossible if future benchmarks show enough difference.
+| Version | MSRV | Edition |
+| --- | --- | --- |
+| 0.1.x - 0.2.x | 1.89 | 2024 |
 
 ## Installation
 
-Add the following to your `Cargo.toml`:
+In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-minidb = "^0.1"
-serde = { version = "^1", features = ["derive"] } 
+minidb = { version = "0.2.0", features = ["macros"] } # or whatever the latest version is
 ```
 
 ## Usage
 
-A minimal example of how to use minidb is provided in `examples/simple.rs`, you can run it with:
+Full examples can be found in the [examples](./examples) directory.
 
-```bash
-cargo run -p minidb --example simple
-
-# or
-cd minidb
-cargo run --example simple
-```
-
-The example code:
+**Note:** The `#[derive(Table)]` macro requires the `macros` feature to be enabled.
 
 ```rust
-use minidb::{AsTable, Database, Id, Table};
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+#[derive(Table, Serialize, Deserialize)]
+#[minidb(name = "people")]
+#[serde(crate = "minidb::serde")] // required if using re-exported serde
 struct Person {
-    #[key]
-    id: Id<Self>,
-    name: String,
-    age: u8,
+   #[key]
+   id: String,
+   name: String,
+   age: u8,
 }
 
-fn main() {
-    // 1. Create database
-    let db = Database::builder()
-        .path("path/to/db")
-        .table::<Person>()
-        .build()
-        .unwrap();
+let db = MiniDB::builder("path/to/db")
+      .table::<Person>()
+      .build()
+      .unwrap();
 
-    // 2. Insert a new person
-    let mut person_to_insert = Person {
-        id: Id::new(),
-        name: "John Doe".to_string(),
-        age: 31,
-    };
-    let id = db.insert(&person_to_insert).unwrap();
-    person_to_insert.id = id;
-    println!("Inserted person: {:?}", person_to_insert);
+// insert a person
+let mut p = Person {
+   id: String::new(), // ID will be generated automatically, leave empty
+   name: "John Doe".to_string(),
+   age: 42,
+};
+db.insert(&mut p).unwrap();
 
-    // 3. Retrieve person
-    let person_retrieved = db.get(&person_to_insert.id).unwrap();
-    assert_eq!(person_retrieved, person_to_insert);
-    println!(
-        "Successfully retrieved and verified person: {:?}",
-        person_retrieved
-    );
+// get a person by ID
+let id = p.id.clone();
+let new_person: Option<Person> = db.get(&id).unwrap();
 
-    // 4. Update person's age
-    person_to_insert.age += 1;
-    db.update(&person_to_insert).unwrap();
-    println!("Updated person: {:?}", person_to_insert);
-
-    // 5. Retrieve updated person
-    let person_retrieved = db.get(&person_to_insert.id).unwrap();
-    assert_eq!(person_retrieved.age, 32);
-    println!(
-        "Successfully retrieved and verified updated person: {:?}",
-        person_retrieved
-    );
-
-    // 6. Delete person
-    db.delete(&person_to_insert.id).unwrap();
-    println!("Deleted person");
-
-    // 7. Verify person is deleted
-    let user_deleted = db.get(&person_to_insert.id);
-    assert!(user_deleted.is_err());
-    println!("Verified deletion");
-
-    println!("\nExample completed successfully");
+if let Some(new_person) = new_person {
+   println!("Found person: {}", new_person.name);
 }
+```
+
+## Audits
+
+From [cargo-audit](https://crates.io/crates/cargo-audit):
+
+```bash
+$ cargo audit
+    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+      Loaded 1026 security advisories (from C:\Users\darkceptor44\.cargo\advisory-db)
+    Updating crates.io index
+    Scanning Cargo.lock for vulnerabilities (134 crate dependencies)
+Crate:     atomic-polyfill
+Version:   1.0.3
+Warning:   unmaintained
+Title:     atomic-polyfill is unmaintained
+Date:      2023-07-11
+ID:        RUSTSEC-2023-0089
+URL:       https://rustsec.org/advisories/RUSTSEC-2023-0089
+Dependency tree:
+atomic-polyfill 1.0.3
+└── heapless 0.7.17
+    └── postcard 1.1.3
+        └── minidb 0.2.0
+
+warning: 1 allowed warning found
 ```
 
 ## Tests
 
-The tests can be ran with:
-
-```bash
-cargo test -p minidb
-
-# or
-cd minidb
-cargo test
-```
+Both integration and unit tests are included. They can be run with `cargo test --all-features`.
 
 ## Benchmarks
 
-The benchmarks can be ran with:
+Benchmarks can be run with `cargo bench --all-features`, and the results look like this:
 
-```bash
-cargo bench -p minidb
-```
-
-### Database
+### Without Encryption
 
 ```text
 Timer precision: 100 ns
-database    fastest       │ slowest       │ median        │ mean          │ samples │ iters
-├─ delete                 │               │               │               │         │
-│  ├─ 1                   │               │               │               │         │
-│  │  ├─ t=1  273.5 µs      │ 327.1 µs      │ 288.9 µs      │ 288.8 µs      │ 100     │ 100
-│  │  ├─ t=4  477.9 µs      │ 1.368 ms      │ 915.8 µs      │ 887.8 µs      │ 100     │ 100
-│  │  ├─ t=8  696.6 µs      │ 2.804 ms      │ 1.661 ms      │ 1.653 ms      │ 104     │ 104
-│  │  ╰─ t=16  1.062 ms      │ 4.956 ms      │ 3.002 ms      │ 2.951 ms      │ 112     │ 112
-│  ╰─ 1000                   │               │               │               │         │
-│     ├─ t=1   274.3 ms      │ 298.7 ms      │ 283.9 ms      │ 285 ms        │ 100     │ 100
-│     ├─ t=4   1.034 s       │ 1.119 s       │ 1.069 s       │ 1.068 s       │ 100     │ 100
-│     ├─ t=8   2.035 s       │ 2.632 s       │ 2.128 s       │ 2.165 s       │ 104     │ 104
-│     ╰─ t=16  4.339 s       │ 4.542 s       │ 4.4 s         │ 4.416 s       │ 112     │ 112
-├─ exists                    │               │               │               │         │
-│  ├─ 1                      │               │               │               │         │
-│  │  ├─ t=1   91.49 µs      │ 191.8 µs      │ 92.69 µs      │ 94.87 µs      │ 100     │ 100
-│  │  ├─ t=4   276.2 µs      │ 425.2 µs      │ 343.6 µs      │ 348 µs        │ 100     │ 100
-│  │  ├─ t=8   479.3 µs      │ 774.1 µs      │ 613.5 µs      │ 607.9 µs      │ 104     │ 104
-│  │  ╰─ t=16  714.5 µs      │ 1.31 ms       │ 1.038 ms      │ 1.024 ms      │ 112     │ 112
-│  ╰─ 1000                   │               │               │               │         │
-│     ├─ t=1   91.47 ms      │ 100.3 ms      │ 92.27 ms      │ 92.59 ms      │ 100     │ 100
-│     ├─ t=4   188.3 ms      │ 217.5 ms      │ 195.7 ms      │ 198.2 ms      │ 100     │ 100
-│     ├─ t=8   466.9 ms      │ 511.9 ms      │ 509 ms        │ 504.7 ms      │ 104     │ 104
-│     ╰─ t=16  1.024 s       │ 1.056 s       │ 1.048 s       │ 1.044 s       │ 112     │ 112
-├─ get                       │               │               │               │         │
-│  ├─ 1                      │               │               │               │         │
-│  │  ├─ t=1   205.5 µs      │ 508 µs        │ 207.8 µs      │ 213.9 µs      │ 100     │ 100
-│  │  ├─ t=4   492.5 µs      │ 837.1 µs      │ 663.9 µs      │ 660.4 µs      │ 100     │ 100
-│  │  ├─ t=8   635.2 µs      │ 1.518 ms      │ 1.279 ms      │ 1.237 ms      │ 104     │ 104
-│  │  ╰─ t=16  1.039 ms      │ 2.566 ms      │ 2.297 ms      │ 2.113 ms      │ 112     │ 112
-│  ╰─ 1000                   │               │               │               │         │
-│     ├─ t=1   204.8 ms      │ 210.1 ms      │ 206.4 ms      │ 206.6 ms      │ 100     │ 100
-│     ├─ t=4   376.5 ms      │ 418.2 ms      │ 392.6 ms      │ 392.8 ms      │ 100     │ 100
-│     ├─ t=8   686.4 ms      │ 732.9 ms      │ 712 ms        │ 711.8 ms      │ 104     │ 104
-│     ╰─ t=16  1.45 s        │ 1.587 s       │ 1.46 s        │ 1.478 s       │ 112     │ 112
-├─ insert                    │               │               │               │         │
-│  ├─ 1                      │               │               │               │         │
-│  │  ├─ t=1   698.4 µs      │ 1.132 ms      │ 717.1 µs      │ 734.9 µs      │ 100     │ 100
-│  │  ├─ t=4   919.5 µs      │ 3.753 ms      │ 2.177 ms      │ 2.099 ms      │ 100     │ 100
-│  │  ├─ t=8   1.221 ms      │ 7.17 ms       │ 4.168 ms      │ 3.957 ms      │ 104     │ 104
-│  │  ╰─ t=16  1.603 ms      │ 13.72 ms      │ 7.236 ms      │ 7.239 ms      │ 112     │ 112
-│  ╰─ 1000                   │               │               │               │         │
-│     ├─ t=1   724.4 ms      │ 1.527 s       │ 780.7 ms      │ 819.9 ms      │ 100     │ 100
-│     ├─ t=4   2.975 s       │ 3.191 s       │ 3.091 s       │ 3.085 s       │ 100     │ 100
-│     ├─ t=8   5.979 s       │ 6.386 s       │ 6.154 s       │ 6.152 s       │ 104     │ 104
-│     ╰─ t=16  12.01 s       │ 12.63 s       │ 12.35 s       │ 12.33 s       │ 112     │ 112
-├─ new                       │               │               │               │         │
-│  ├─ t=1      1.485 ms      │ 1.787 ms      │ 1.534 ms      │ 1.54 ms       │ 100     │ 100
-│  ├─ t=4      2.539 ms      │ 3.575 ms      │ 2.995 ms      │ 2.987 ms      │ 100     │ 100
-│  ├─ t=8      4.216 ms      │ 5.654 ms      │ 5.088 ms      │ 4.999 ms      │ 104     │ 104
-│  ╰─ t=16     7.947 ms      │ 10.85 ms      │ 9.929 ms      │ 9.728 ms      │ 112     │ 112
-╰─ update                    │               │               │               │         │
-   ├─ 1                      │               │               │               │         │
-   │  ├─ t=1   746 µs        │ 6.473 ms      │ 800 µs        │ 886.6 µs      │ 100     │ 100
-   │  ├─ t=4   1.042 ms      │ 12.66 ms      │ 2.802 ms      │ 2.858 ms      │ 100     │ 100
-   │  ├─ t=8   1.165 ms      │ 7.75 ms       │ 4.052 ms      │ 4.146 ms      │ 104     │ 104
-   │  ╰─ t=16  1.586 ms      │ 15.22 ms      │ 8.026 ms      │ 8.066 ms      │ 112     │ 112
-   ╰─ 1000                   │               │               │               │         │
-      ├─ t=1   771 ms        │ 839.2 ms      │ 796.9 ms      │ 799 ms        │ 100     │ 100
-      ├─ t=4   3.232 s       │ 3.406 s       │ 3.282 s       │ 3.293 s       │ 100     │ 100
-      ├─ t=8   6.704 s       │ 6.943 s       │ 6.748 s       │ 6.792 s       │ 104     │ 104
-      ╰─ t=16  13.91 s       │ 14.37 s       │ 14.08 s       │ 14.09 s       │ 112     │ 112
+minidb                        fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ all                                      │               │               │               │         │
+│  ├─ 1000                    198.3 µs      │ 269.4 µs      │ 206.6 µs      │ 209.3 µs      │ 100     │ 100
+│  ├─ 10000                   2.238 ms      │ 3.15 ms       │ 2.399 ms      │ 2.454 ms      │ 100     │ 100
+│  ╰─ 100000                  23.11 ms      │ 26.53 ms      │ 23.8 ms       │ 23.96 ms      │ 100     │ 100
+├─ create_table               389.7 µs      │ 1.029 ms      │ 441.1 µs      │ 486.7 µs      │ 100     │ 100
+├─ export_table                             │               │               │               │         │
+│  ├─ (1000, false)           243.8 µs      │ 455.1 µs      │ 246.3 µs      │ 270.2 µs      │ 100     │ 100
+│  ├─ (1000, true)            250.2 µs      │ 327 µs        │ 252.6 µs      │ 255.5 µs      │ 100     │ 100
+│  ├─ (10000, false)          2.456 ms      │ 3.621 ms      │ 2.921 ms      │ 2.895 ms      │ 100     │ 100
+│  ╰─ (10000, true)           2.628 ms      │ 3.735 ms      │ 2.948 ms      │ 2.936 ms      │ 100     │ 100
+├─ for_each                                 │               │               │               │         │
+│  ├─ 1                       912.2 ns      │ 924.7 ns      │ 912.2 ns      │ 915.3 ns      │ 100     │ 1600
+│  ├─ 1000                    169.9 µs      │ 185.5 µs      │ 171.7 µs      │ 172.5 µs      │ 100     │ 100
+│  ╰─ 10000                   1.796 ms      │ 2.458 ms      │ 1.81 ms       │ 1.834 ms      │ 100     │ 100
+├─ get                        799.7 ns      │ 818.5 ns      │ 806 ns        │ 805.6 ns      │ 100     │ 1600
+├─ get (one from large db)                  │               │               │               │         │
+│  ├─ 100                     943.5 ns      │ 1.374 µs      │ 949.7 ns      │ 956 ns        │ 100     │ 1600
+│  ╰─ 1000                    1.037 µs      │ 1.062 µs      │ 1.043 µs      │ 1.044 µs      │ 100     │ 1600
+├─ get_setting                699.7 ns      │ 1.212 µs      │ 712.2 ns      │ 718.9 ns      │ 100     │ 1600
+├─ insert (existing db)       434.1 µs      │ 1.038 ms      │ 509.2 µs      │ 541.9 µs      │ 100     │ 100
+├─ insert (fresh db)          435.6 µs      │ 1.533 ms      │ 482.7 µs      │ 531.9 µs      │ 100     │ 100
+├─ insert_many (existing db)                │               │               │               │         │
+│  ├─ 1                       483.4 µs      │ 1.036 ms      │ 595.9 µs      │ 622.5 µs      │ 100     │ 100
+│  ├─ 1000                    3.831 ms      │ 29.8 ms       │ 18.69 ms      │ 16.93 ms      │ 100     │ 100
+│  ╰─ 10000                   35.31 ms      │ 262 ms        │ 186 ms        │ 166.1 ms      │ 100     │ 100
+├─ insert_many (fresh db)                   │               │               │               │         │
+│  ├─ 1                       436.1 µs      │ 996.6 µs      │ 494.5 µs      │ 526.3 µs      │ 100     │ 100
+│  ├─ 1000                    3.728 ms      │ 4.975 ms      │ 3.88 ms       │ 3.957 ms      │ 100     │ 100
+│  ╰─ 10000                   34.67 ms      │ 38.88 ms      │ 35.27 ms      │ 35.55 ms      │ 100     │ 100
+├─ is_empty                   643.5 ns      │ 662.2 ns      │ 649.7 ns      │ 651.4 ns      │ 100     │ 1600
+├─ new                        5.551 ms      │ 9.073 ms      │ 6.196 ms      │ 6.509 ms      │ 100     │ 100
+├─ remove (existing db)       443.8 µs      │ 904.2 µs      │ 467 µs        │ 504.9 µs      │ 100     │ 100
+├─ remove (fresh db)          516.2 µs      │ 1.039 ms      │ 576 µs        │ 611.5 µs      │ 100     │ 100
+├─ remove_many (existing db)                │               │               │               │         │
+│  ├─ 1                       432.2 µs      │ 1.096 ms      │ 473.2 µs      │ 520 µs        │ 100     │ 100
+│  ├─ 1000                    1.792 ms      │ 2.227 ms      │ 1.925 ms      │ 1.936 ms      │ 100     │ 100
+│  ╰─ 10000                   16.41 ms      │ 22.08 ms      │ 17.12 ms      │ 17.22 ms      │ 100     │ 100
+├─ remove_many (fresh db)                   │               │               │               │         │
+│  ├─ 1                       2.461 ms      │ 4.425 ms      │ 2.792 ms      │ 2.877 ms      │ 100     │ 100
+│  ├─ 1000                    3.745 ms      │ 6.356 ms      │ 4.287 ms      │ 4.419 ms      │ 100     │ 100
+│  ╰─ 10000                   18.58 ms      │ 21.13 ms      │ 19.62 ms      │ 19.7 ms       │ 100     │ 100
+├─ set_setting                460.3 µs      │ 919.9 µs      │ 516.5 µs      │ 552.6 µs      │ 100     │ 100
+├─ transaction                538.7 µs      │ 1.213 ms      │ 602.4 µs      │ 655.7 µs      │ 100     │ 100
+├─ update (existing db)       456.9 µs      │ 996.9 µs      │ 482.7 µs      │ 515.5 µs      │ 100     │ 100
+├─ update (fresh db)          520.8 µs      │ 939.1 µs      │ 576.8 µs      │ 608 µs        │ 100     │ 100
+├─ update_many (existing db)                │               │               │               │         │
+│  ├─ 1                       458.9 µs      │ 955.2 µs      │ 496.1 µs      │ 530.1 µs      │ 100     │ 100
+│  ├─ 1000                    1.661 ms      │ 25.14 ms      │ 17.64 ms      │ 14.79 ms      │ 100     │ 100
+│  ╰─ 10000                   14.47 ms      │ 288.1 ms      │ 181.5 ms      │ 154.9 ms      │ 100     │ 100
+╰─ update_many (fresh db)                   │               │               │               │         │
+   ├─ 1                       534.4 µs      │ 948.8 µs      │ 623.9 µs      │ 648.9 µs      │ 100     │ 100
+   ├─ 1000                    1.53 ms       │ 2.045 ms      │ 1.661 ms      │ 1.701 ms      │ 100     │ 100
+   ╰─ 10000                   13.86 ms      │ 17.66 ms      │ 14.38 ms      │ 14.47 ms      │ 100     │ 100
 ```
 
-### Id
+### With Encryption
 
 ```text
 Timer precision: 100 ns
-id              fastest       │ slowest       │ median        │ mean          │ samples │ iters
-╰─ id_generate  2.299 µs      │ 160 µs        │ 2.399 µs      │ 3.979 µs      │ 100     │ 100
+encryption                    fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ all                                      │               │               │               │         │
+│  ├─ 1000                    1.577 ms      │ 2.006 ms      │ 1.594 ms      │ 1.646 ms      │ 100     │ 100
+│  ├─ 10000                   16.23 ms      │ 19.04 ms      │ 16.51 ms      │ 16.68 ms      │ 100     │ 100
+│  ╰─ 100000                  164.9 ms      │ 192.6 ms      │ 184.1 ms      │ 180.2 ms      │ 100     │ 100
+├─ create_table               427.3 µs      │ 992 µs        │ 485.9 µs      │ 500.8 µs      │ 100     │ 100
+├─ export_table                             │               │               │               │         │
+│  ├─ (1000, false)           1.719 ms      │ 2.008 ms      │ 1.87 ms       │ 1.875 ms      │ 100     │ 100
+│  ├─ (1000, true)            1.71 ms       │ 2.033 ms      │ 1.861 ms      │ 1.87 ms       │ 100     │ 100
+│  ├─ (10000, false)          18.04 ms      │ 20.7 ms       │ 19.5 ms       │ 19.47 ms      │ 100     │ 100
+│  ╰─ (10000, true)           18.24 ms      │ 20.46 ms      │ 19.56 ms      │ 19.51 ms      │ 100     │ 100
+├─ for_each                                 │               │               │               │         │
+│  ├─ 1                       2.299 µs      │ 11.59 µs      │ 2.999 µs      │ 3.057 µs      │ 100     │ 100
+│  ├─ 1000                    1.665 ms      │ 3.813 ms      │ 1.815 ms      │ 1.866 ms      │ 100     │ 100
+│  ╰─ 10000                   17.19 ms      │ 19.35 ms      │ 17.94 ms      │ 17.92 ms      │ 100     │ 100
+├─ get                        2.199 µs      │ 10.59 µs      │ 2.699 µs      │ 2.777 µs      │ 100     │ 100
+├─ get (one from large db)                  │               │               │               │         │
+│  ├─ 100                     2.399 µs      │ 12.99 µs      │ 3.299 µs      │ 3.338 µs      │ 100     │ 100
+│  ╰─ 1000                    2.749 µs      │ 3.074 µs      │ 2.774 µs      │ 2.799 µs      │ 100     │ 400
+├─ get_setting                2.037 µs      │ 5.912 µs      │ 2.256 µs      │ 2.334 µs      │ 100     │ 800
+├─ insert (existing db)       544.3 µs      │ 1.264 ms      │ 654.4 µs      │ 700 µs        │ 100     │ 100
+├─ insert (fresh db)          512.7 µs      │ 1.099 ms      │ 572.1 µs      │ 610 µs        │ 100     │ 100
+├─ insert_many (existing db)                │               │               │               │         │
+│  ├─ 1                       536.4 µs      │ 1.122 ms      │ 663 µs        │ 686 µs        │ 100     │ 100
+│  ├─ 1000                    6.73 ms       │ 62.71 ms      │ 36.51 ms      │ 32.25 ms      │ 100     │ 100
+│  ╰─ 10000                   68.31 ms      │ 491.5 ms      │ 358.3 ms      │ 322.2 ms      │ 100     │ 100
+├─ insert_many (fresh db)                   │               │               │               │         │
+│  ├─ 1                       503.5 µs      │ 1.626 ms      │ 601.5 µs      │ 639.8 µs      │ 100     │ 100
+│  ├─ 1000                    6.078 ms      │ 7.5 ms        │ 6.754 ms      │ 6.782 ms      │ 100     │ 100
+│  ╰─ 10000                   63.6 ms       │ 83.82 ms      │ 66.86 ms      │ 67.57 ms      │ 100     │ 100
+├─ is_empty                   606 ns        │ 881 ns        │ 612.2 ns      │ 652 ns        │ 100     │ 1600
+├─ new                        6.867 ms      │ 10.71 ms      │ 7.791 ms      │ 8.062 ms      │ 100     │ 100
+├─ remove (existing db)       490.8 µs      │ 842 µs        │ 556.8 µs      │ 579.6 µs      │ 100     │ 100
+├─ remove (fresh db)          620.2 µs      │ 1.163 ms      │ 736 µs        │ 763 µs        │ 100     │ 100
+├─ remove_many (existing db)                │               │               │               │         │
+│  ├─ 1                       491.2 µs      │ 1.071 ms      │ 563.6 µs      │ 604.3 µs      │ 100     │ 100
+│  ├─ 1000                    3.603 ms      │ 4.308 ms      │ 3.92 ms       │ 3.923 ms      │ 100     │ 100
+│  ╰─ 10000                   35.45 ms      │ 61.15 ms      │ 37.5 ms       │ 38.18 ms      │ 100     │ 100
+├─ remove_many (fresh db)                   │               │               │               │         │
+│  ├─ 1                       3.002 ms      │ 5.287 ms      │ 3.504 ms      │ 3.564 ms      │ 100     │ 100
+│  ├─ 1000                    5.931 ms      │ 8.27 ms       │ 6.817 ms      │ 6.849 ms      │ 100     │ 100
+│  ╰─ 10000                   38.94 ms      │ 55.53 ms      │ 42.19 ms      │ 42.62 ms      │ 100     │ 100
+├─ set_setting                521.6 µs      │ 988.8 µs      │ 648.9 µs      │ 675.2 µs      │ 100     │ 100
+├─ transaction                530.9 µs      │ 3.467 ms      │ 586.1 µs      │ 653.7 µs      │ 100     │ 100
+├─ update (existing db)       531.6 µs      │ 980 µs        │ 628.2 µs      │ 657.4 µs      │ 100     │ 100
+├─ update (fresh db)          618.8 µs      │ 1.251 ms      │ 719.9 µs      │ 743.5 µs      │ 100     │ 100
+├─ update_many (existing db)                │               │               │               │         │
+│  ├─ 1                       530.4 µs      │ 959.2 µs      │ 627 µs        │ 637.4 µs      │ 100     │ 100
+│  ├─ 1000                    3.821 ms      │ 46.93 ms      │ 32.47 ms      │ 29.09 ms      │ 100     │ 100
+│  ╰─ 10000                   39.27 ms      │ 508.9 ms      │ 355.5 ms      │ 305 ms        │ 100     │ 100
+╰─ update_many (fresh db)                   │               │               │               │         │
+   ├─ 1                       610.5 µs      │ 17.29 ms      │ 738.1 µs      │ 917.4 µs      │ 100     │ 100
+   ├─ 1000                    3.577 ms      │ 4.351 ms      │ 3.955 ms      │ 3.944 ms      │ 100     │ 100
+   ╰─ 10000                   36.43 ms      │ 60.65 ms      │ 38.72 ms      │ 41.19 ms      │ 100     │ 100
 ```
 
 ## License
 
-This project is licensed under the [GNU Lesser General Public License v3](https://www.gnu.org/licenses/lgpl-3.0.en.html).
+This project is licensed under the Mozilla Public License, version 2.0. See the [LICENSE](LICENSE) file for details.

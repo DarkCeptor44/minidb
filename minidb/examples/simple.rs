@@ -1,64 +1,82 @@
-use minidb::{AsTable, Database, Id, Table};
-use serde::{Deserialize, Serialize};
-use tempfile::tempdir;
+use minidb::{
+    MiniDB, Table,
+    serde::{Deserialize, Serialize},
+};
+use tempfile::NamedTempFile;
 
-#[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+// If you have the `macros` feature enabled, you can use the derive macro like this:
+
+// #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
+// #[minidb(name = "people")]
+// #[serde(crate = "minidb::serde")] // required if using re-exported serde
+// struct Person {
+//     #[key]
+//     id: String,
+//     name: String,
+//     age: u8,
+// }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "minidb::serde")] // required if using re-exported serde
 struct Person {
-    #[key]
-    id: Id<Self>,
+    id: String,
     name: String,
     age: u8,
 }
 
-fn main() {
-    let temp_dir = tempdir().unwrap();
-    let db_path = temp_dir.path();
+impl Table for Person {
+    const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> =
+        redb::TableDefinition::new("people");
 
-    // 1. Create database
-    let db = Database::builder()
-        .path(db_path)
+    fn get_id(&self) -> &str {
+        &self.id
+    }
+
+    fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
+}
+
+fn main() {
+    let temp_file = NamedTempFile::new().unwrap();
+
+    // 1. Create a new database without encryption and only one table (Person)
+    let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
         .build()
         .unwrap();
 
     // 2. Insert a new person
     let mut person_to_insert = Person {
-        id: Id::new(),
+        id: String::new(), // this must be empty because MiniDB will generate an ID automatically
         name: "John Doe".to_string(),
         age: 31,
     };
-    let id = db.insert(&person_to_insert).unwrap();
-    person_to_insert.id = id;
-    println!("Inserted person: {:?}", person_to_insert);
+    db.insert(&mut person_to_insert).unwrap();
+    println!("Inserted person: {person_to_insert:?}");
 
-    // 3. Retrieve person
-    let person_retrieved = db.get(&person_to_insert.id).unwrap();
+    // 3. Retrieve person by ID
+    let person_retrieved: Person = db.get(&person_to_insert.id).unwrap().unwrap();
     assert_eq!(person_retrieved, person_to_insert);
-    println!(
-        "Successfully retrieved and verified person: {:?}",
-        person_retrieved
-    );
+    println!("Successfully retrieved and verified person: {person_retrieved:?}");
 
-    // 4. Update person's age
+    // 4. Update person
     person_to_insert.age += 1;
     db.update(&person_to_insert).unwrap();
-    println!("Updated person: {:?}", person_to_insert);
+    println!("Updated person: {person_to_insert:?}");
 
     // 5. Retrieve updated person
-    let person_retrieved = db.get(&person_to_insert.id).unwrap();
+    let person_retrieved: Person = db.get(&person_to_insert.id).unwrap().unwrap();
     assert_eq!(person_retrieved.age, 32);
-    println!(
-        "Successfully retrieved and verified updated person: {:?}",
-        person_retrieved
-    );
+    println!("Successfully retrieved and verified updated person: {person_retrieved:?}");
 
     // 6. Delete person
-    db.delete(&person_to_insert.id).unwrap();
+    db.remove::<Person>(&person_to_insert.id).unwrap();
     println!("Deleted person");
 
     // 7. Verify person is deleted
-    let user_deleted = db.get(&person_to_insert.id);
-    assert!(user_deleted.is_err());
+    let user_deleted: Option<Person> = db.get(&person_to_insert.id).unwrap();
+    assert!(user_deleted.is_none());
     println!("Verified deletion");
 
     println!("\nExample completed successfully");

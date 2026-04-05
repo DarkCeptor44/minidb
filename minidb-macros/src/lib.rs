@@ -1,13 +1,6 @@
-// Copyright (c) 2025, DarkCeptor44
-//
-// This file is licensed under the GNU Lesser General Public License
-// (either version 3 or, at your option, any later version).
-//
-// This software comes without any warranty, express or implied. See the
-// GNU Lesser General Public License for details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this software. If not, see <https://www.gnu.org/licenses/>.
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 //! Dummy documentation block
 //!
@@ -21,10 +14,7 @@ use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::Span;
 use quote::quote;
-use syn::{
-    Attribute, Data, DeriveInput, Error, GenericArgument, Ident, Lit, LitStr, PathArguments, Type,
-    parse_macro_input,
-};
+use syn::{Attribute, Data, DeriveInput, Error, Ident, Lit, LitStr, Type, parse_macro_input};
 
 /// Represents the `minidb` attribute on a struct
 #[derive(Debug, Default)]
@@ -62,11 +52,9 @@ impl MiniDBStructAttributes {
     }
 }
 
-/// Represents the attributes on a field
 #[derive(Debug, Default)]
 struct MiniDBFieldAttributes {
     is_key: bool,
-    is_foreign_key: bool,
 }
 
 impl MiniDBFieldAttributes {
@@ -77,9 +65,6 @@ impl MiniDBFieldAttributes {
             if attr.path().is_ident("key") {
                 // #[key]
                 field_attrs.is_key = true;
-            } else if attr.path().is_ident("foreign_key") {
-                // #[foreign_key]
-                field_attrs.is_foreign_key = true;
             }
         }
 
@@ -87,7 +72,7 @@ impl MiniDBFieldAttributes {
     }
 }
 
-/// Derives `AsTable` for a struct
+/// Derives `Table` for a struct
 ///
 /// ## Attributes
 ///
@@ -98,12 +83,6 @@ impl MiniDBFieldAttributes {
 /// ### Field
 ///
 /// * `#[key]` - Sets the field as a primary key
-/// * `#[foreign_key]` - Sets the field as a foreign key to the referenced table's primary key, for example:
-///
-/// ```rust,ignore
-/// #[foreign_key]
-/// customer_id: Id<Person>, // references the primary key of the Person table
-/// ```
 ///
 /// ## Example
 ///
@@ -114,13 +93,12 @@ impl MiniDBFieldAttributes {
 /// #[minidb(name = "people")]
 /// struct Person {
 ///     #[key]
-///     id: Id<Self>,
+///     id: String,
 ///     name: String,
 ///     age: u8,
 /// }
 /// ```
-#[proc_macro_derive(Table, attributes(serde, minidb, key, foreign_key))]
-#[allow(clippy::too_many_lines)]
+#[proc_macro_derive(Table, attributes(serde, minidb, key))]
 pub fn table_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let struct_name = &input.ident;
@@ -143,7 +121,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
             .into();
     };
     let crate_path = match found_crate {
-        FoundCrate::Itself => quote!(crate),
+        FoundCrate::Itself => quote!(minidb),
         FoundCrate::Name(name) => {
             let ident = Ident::new(&name, Span::call_site());
             quote!(#ident)
@@ -165,7 +143,6 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
 
     let mut id_field_ident: Option<Ident> = None;
     let mut num_keys_fields = 0;
-    let mut foreign_key_entries = Vec::new();
 
     for field in fields {
         let Some(ident) = field.ident.as_ref() else {
@@ -183,28 +160,17 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
 
             let is_id_type = is_id_type(ty);
             if !is_id_type {
-                return Error::new_spanned(ty, "The #[key] field must be of type `Id<Self>`.")
+                return Error::new_spanned(ty, "The #[key] field must be of type `String`.")
                     .to_compile_error()
                     .into();
             }
-        }
-
-        if field_attrs.is_foreign_key {
-            let ref_table = match get_ref_table(ty) {
-                Ok(t) => t,
-                Err(e) => return e.to_compile_error().into(),
-            };
-
-            foreign_key_entries.push(quote! {
-                (stringify!(#ident), #ref_table, Box::new(|s: &Self| s.#ident.value.as_deref()))
-            });
         }
     }
 
     if num_keys_fields != 1 {
         return Error::new_spanned(
             struct_name,
-            "A struct deriving `Table` must have exactly one field marked with `#[key]`.",
+            "A struct deriving `Table` must have exactly one field marked with #[key].",
         )
         .to_compile_error()
         .into();
@@ -213,36 +179,28 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
     let Some(id_field_ident) = id_field_ident else {
         return Error::new_spanned(
             fields,
-            "A struct deriving `Table` must have exactly one field marked with `#[key]`.",
+            "A struct deriving `Table` must have exactly one field marked with #[key].",
         )
         .to_compile_error()
         .into();
     };
 
-    let as_table_impl = quote! {
-        impl #impl_generics #crate_path::AsTable for #struct_name #ty_generics #where_clause {
-            fn name() -> &'static str {
-                #table_name
-            }
+    let table_model_impl = quote! {
+        impl #impl_generics #crate_path::Table for #struct_name #ty_generics #where_clause {
+            const TABLE: #crate_path::redb::TableDefinition<'_, &'static str, &[u8]> = #crate_path::redb::TableDefinition::new(#table_name);
 
-            fn get_id(&self) -> &#crate_path::Id<Self> {
+            fn get_id(&self) -> &str {
                 &self.#id_field_ident
             }
 
-            fn set_id(&mut self, id: #crate_path::Id<Self>) {
+            fn set_id(&mut self, id: String) {
                 self.#id_field_ident = id;
-            }
-
-            fn get_foreign_keys() -> Vec<(&'static str, &'static str, Box<dyn Fn(&Self) -> Option<&str> + Send + Sync>)> {
-                vec![
-                    #(#foreign_key_entries),*
-                ]
             }
         }
     };
 
     let out = quote! {
-        #as_table_impl
+        #table_model_impl
     };
 
     // return Error::new_spanned(struct_name, out)
@@ -254,70 +212,11 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
 fn is_id_type(ty: &Type) -> bool {
     if let Type::Path(type_path) = ty {
         if let Some(last_segment) = type_path.path.segments.last() {
-            if last_segment.ident == "Id" {
-                // checks if it has generic arguments
-                if let PathArguments::AngleBracketed(args) = &last_segment.arguments {
-                    // check if it has only 1 generic argument
-                    args.args.len() == 1
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
+            last_segment.ident == "String"
         } else {
             false
         }
     } else {
         false
-    }
-}
-
-fn get_ref_table(ty: &Type) -> Result<String, Error> {
-    match ty {
-        Type::Path(type_path) => match type_path.path.segments.last() {
-            Some(last_segment) => {
-                if last_segment.ident == "Id" {
-                    match &last_segment.arguments {
-                        PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
-                            match &args.args[0] {
-                                GenericArgument::Type(Type::Path(type_path)) => {
-                                    match type_path.path.segments.last() {
-                                        Some(inner_last_segment) => {
-                                            Ok(inner_last_segment.ident.to_string())
-                                        }
-                                        _ => Err(Error::new_spanned(
-                                            ty,
-                                            "Foreign key field must be of type `Id<Table>`.",
-                                        )),
-                                    }
-                                }
-                                _ => Err(Error::new_spanned(
-                                    ty,
-                                    "Foreign key field must be of type `Id<Table>`.",
-                                )),
-                            }
-                        }
-                        _ => Err(Error::new_spanned(
-                            ty,
-                            "Foreign key field must be of type `Id<Table>`.",
-                        )),
-                    }
-                } else {
-                    Err(Error::new_spanned(
-                        ty,
-                        "Foreign key field must be of type `Id<Table>`.",
-                    ))
-                }
-            }
-            _ => Err(Error::new_spanned(
-                ty,
-                "Foreign key field must be of type `Id<Table>`.",
-            )),
-        },
-        _ => Err(Error::new_spanned(
-            ty,
-            "Foreign key field must be of type `Id<Table>`.",
-        )),
     }
 }

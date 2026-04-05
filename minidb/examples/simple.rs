@@ -1,5 +1,7 @@
-use minidb::{MiniDB, TableModel};
-use serde::{Deserialize, Serialize};
+use minidb::{
+    MiniDB, TableModel,
+    serde::{Deserialize, Serialize},
+};
 use tempfile::NamedTempFile;
 
 // If you have the `macros` feature enabled, you can use the derive macro like this:

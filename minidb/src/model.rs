@@ -15,8 +15,10 @@ use serde::{Deserialize, Serialize};
 /// ## Example
 ///
 /// ```rust,no_run
-/// use minidb::TableModel;
-/// use serde::{Deserialize, Serialize};
+/// use minidb::{
+///     serde::{Deserialize, Serialize},
+///     TableModel,
+/// };
 ///
 /// #[derive(Serialize, Deserialize)]
 /// struct Person {

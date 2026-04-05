@@ -30,7 +30,7 @@
 //!
 //! ## Getting Started
 //!
-//! Add `minidb` and `serde` (with the `derive` feature) to your `Cargo.toml`:
+//! Add `minidb` to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
@@ -44,8 +44,10 @@
 //! **Note**: This example requires the `macros` feature.
 //!
 //! ```rust,ignore
-//! use minidb::{MiniDB, Table};
-//! use serde::{Deserialize, Serialize};
+//! use minidb::{
+//!     serde::{Deserialize, Serialize},
+//!     MiniDB, Table
+//! };
 //!
 //! #[derive(Table, Serialize, Deserialize, Debug)]
 //! #[minidb(name = "people")]
@@ -84,12 +86,6 @@
 //! }
 //! ```
 //!
-//! ## Important Notes
-//!
-//! * **MSRV:** The Minimum Supported Rust Version for version 0.1.x is 1.89.
-//! * **Dependencies:** Relies heavily on [redb](https://crates.io/crates/redb) for core storage, [Postcard](https://crates.io/crates/postcard)/[Serde](https://crates.io/crates/serde) for serialization/deserialization, and potentially [chacha20poly1305](https://crates.io/crates/chacha20poly1305) for encryption.
-//! * **Procedural Macros:** Functionality like `#[derive(Table)]` comes from the separate [minidb-macros](https://crates.io/crates/minidb-macros) crate, which can be enabled with the `macros` feature.
-//!
 //! See the individual module and item documentation for further details on specific components.
 //!
 //! ## License
@@ -110,6 +106,7 @@ pub use crate::{
 #[cfg(feature = "macros")]
 pub use minidb_macros::Table;
 pub use redb;
+pub use serde;
 
 use std::{fmt::Debug, path::PathBuf};
 

@@ -9,9 +9,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::SETTINGS_TABLE;
-use crate::encryption::{decrypt_bytes, encrypt_bytes};
-use crate::model::TableModel;
+use std::fmt::Debug;
+
+use crate::{
+    SETTINGS_TABLE,
+    encryption::{decrypt_bytes, encrypt_bytes},
+    model::TableModel,
+};
 use anyhow::{Context, Result, anyhow};
 use chacha20poly1305::XChaCha20Poly1305;
 use redb::WriteTransaction;
@@ -24,6 +28,12 @@ use serde::Serialize;
 pub struct Transaction<'a> {
     pub(crate) txn: WriteTransaction,
     pub(crate) cipher: Option<&'a XChaCha20Poly1305>,
+}
+
+impl Debug for Transaction<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Transaction").finish_non_exhaustive()
+    }
 }
 
 impl Transaction<'_> {

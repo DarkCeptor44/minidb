@@ -9,7 +9,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 
 use crate::encryption::derive_key_from_password;
 use crate::model::TableModel;
@@ -41,6 +41,15 @@ pub struct MiniDBBuilder {
     path: PathBuf,
     initializers: Vec<Initializer>,
     key_source: Option<KeySource>,
+}
+
+impl Debug for MiniDBBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MiniDBBuilder")
+            .field("path", &self.path)
+            .field("key_source", &self.key_source)
+            .finish_non_exhaustive()
+    }
 }
 
 impl MiniDBBuilder {
@@ -236,4 +245,17 @@ pub enum KeySource {
 
     /// The key source is a function that returns a key (`[u8; 32]`)
     ExternalKeyProvider(Box<dyn Fn() -> ArgonKey>),
+}
+
+impl Debug for KeySource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeySource::Password(_) => f.debug_tuple("Password").field(&"********").finish(),
+            KeySource::PreDerived(key) => f.debug_tuple("PreDerived").field(key).finish(),
+            KeySource::ExternalKeyProvider(_) => f
+                .debug_tuple("ExternalKeyProvider")
+                .field(&"<closure>")
+                .finish(),
+        }
+    }
 }

@@ -9,7 +9,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
 
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use crate::encryption::decrypt_bytes;
 use anyhow::Context;
@@ -60,6 +60,12 @@ pub struct TableIterator<'a, T> {
     inner: Range<'a, &'static str, &'static [u8]>,
     cipher: Option<&'a XChaCha20Poly1305>,
     _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> Debug for TableIterator<'_, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TableIterator").finish_non_exhaustive()
+    }
 }
 
 impl<'a, T> TableIterator<'a, T> {

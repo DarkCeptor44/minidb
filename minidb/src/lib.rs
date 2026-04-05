@@ -99,14 +99,16 @@ mod model;
 mod testing;
 mod transaction;
 
-pub use crate::builder::{KeySource, MiniDBBuilder};
-pub use crate::model::{TableIterator, TableModel};
-pub use crate::transaction::Transaction;
+pub use crate::{
+    builder::{KeySource, MiniDBBuilder},
+    model::{TableIterator, TableModel},
+    transaction::Transaction,
+};
 #[cfg(feature = "macros")]
 pub use minidb_macros::Table;
 pub use redb;
 
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 
 use crate::encryption::{decrypt_bytes, encrypt_bytes};
 use anyhow::{Context, Result, anyhow};
@@ -129,6 +131,14 @@ pub(crate) type ArgonKey = [u8; 32];
 pub struct MiniDB {
     db: Database,
     cipher: Option<XChaCha20Poly1305>,
+}
+
+impl Debug for MiniDB {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MiniDB")
+            .field("db", &self.db)
+            .finish_non_exhaustive()
+    }
 }
 
 impl MiniDB {

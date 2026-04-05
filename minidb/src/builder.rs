@@ -4,9 +4,10 @@
 
 use std::{fmt::Debug, path::PathBuf};
 
-use crate::encryption::derive_key_from_password;
-use crate::model::TableModel;
-use crate::{ArgonKey, META_TABLE, MiniDB, SETTINGS_TABLE};
+use crate::{
+    ArgonKey, META_TABLE, MiniDB, SETTINGS_TABLE, encryption::derive_key_from_password,
+    model::Table,
+};
 use anyhow::{Context, Result};
 use chacha20poly1305::KeyInit;
 use chacha20poly1305::XChaCha20Poly1305;
@@ -104,7 +105,7 @@ impl MiniDBBuilder {
     #[must_use]
     pub fn table<T>(mut self) -> Self
     where
-        T: TableModel + 'static,
+        T: Table + 'static,
     {
         self.initializers.push(Box::new(|txn| {
             txn.open_table(T::TABLE)

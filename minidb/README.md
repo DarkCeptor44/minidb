@@ -4,11 +4,11 @@
 
 The main MiniDB crate providing a structured wrapper for [redb](https://crates.io/crates/redb) with serialization/deserialization.
 
-## Features
+## Key Features
 
 * ACID compliant and whatever else [redb](https://crates.io/crates/redb) claims
 * Automatic serialization/deserialization with [Postcard](https://crates.io/crates/postcard), using [serde](https://crates.io/crates/serde)
-* Structured key-value storage
+* Structured key-value storage with automatic [CUID2](https://crates.io/crates/cuid2) IDs
 * Type-safe operations (mostly)
 * Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
 * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition

@@ -3,7 +3,7 @@
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use divan::{Bencher, black_box};
-use minidb::{KeySource, MiniDB, TableModel};
+use minidb::{KeySource, MiniDB, Table};
 use rand::{RngExt, seq::IndexedRandom};
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ struct Person {
     age: u8,
 }
 
-impl TableModel for Person {
+impl Table for Person {
     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> = TableDefinition::new("people");
 
     fn get_id(&self) -> &str {

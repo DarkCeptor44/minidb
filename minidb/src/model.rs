@@ -10,14 +10,14 @@ use chacha20poly1305::XChaCha20Poly1305;
 use redb::{Range, TableDefinition};
 use serde::{Deserialize, Serialize};
 
-/// A table model. A table model is a struct that implements the [`TableModel`] trait.
+/// A table model. A table model is a struct that implements the [`Table`] trait.
 ///
 /// ## Example
 ///
 /// ```rust,no_run
 /// use minidb::{
 ///     serde::{Deserialize, Serialize},
-///     TableModel,
+///     Table,
 /// };
 ///
 /// #[derive(Serialize, Deserialize)]
@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 ///     age: u8,
 /// }
 ///
-/// impl TableModel for Person {
+/// impl Table for Person {
 ///     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> = redb::TableDefinition::new("people");
 ///
 ///     fn get_id(&self) -> &str {
@@ -39,7 +39,7 @@ use serde::{Deserialize, Serialize};
 ///     }
 /// }
 /// ```
-pub trait TableModel: Serialize + for<'de> Deserialize<'de> {
+pub trait Table: Serialize + for<'de> Deserialize<'de> {
     /// The table definition
     const TABLE: TableDefinition<'_, &'static str, &[u8]>;
 

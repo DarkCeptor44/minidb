@@ -1,5 +1,5 @@
 use minidb::{
-    MiniDB, TableModel,
+    MiniDB, Table,
     serde::{Deserialize, Serialize},
 };
 use tempfile::NamedTempFile;
@@ -22,7 +22,7 @@ struct Person {
     age: u8,
 }
 
-impl TableModel for Person {
+impl Table for Person {
     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> =
         redb::TableDefinition::new("people");
 

@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use crate::{
     SETTINGS_TABLE,
     encryption::{decrypt_bytes, encrypt_bytes},
-    model::TableModel,
+    model::Table,
 };
 use anyhow::{Context, Result, anyhow};
 use chacha20poly1305::XChaCha20Poly1305;
@@ -51,7 +51,7 @@ impl Transaction<'_> {
     /// ```
     pub fn insert<T>(&self, item: &mut T) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         if item.get_id().trim().is_empty() {
             let id = cuid2::slug();
@@ -97,7 +97,7 @@ impl Transaction<'_> {
     /// ```
     pub fn insert_many<T>(&self, items: &mut [T]) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         let mut table = self
             .txn
@@ -145,7 +145,7 @@ impl Transaction<'_> {
     /// ```
     pub fn update<T>(&self, item: &T) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         if item.get_id().trim().is_empty() {
             return Err(anyhow!("id cannot be empty"));
@@ -190,7 +190,7 @@ impl Transaction<'_> {
     /// ```
     pub fn update_many<T>(&self, items: &[T]) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         let mut table = self
             .txn
@@ -241,7 +241,7 @@ impl Transaction<'_> {
     /// ```
     pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let mut table = self
             .txn
@@ -290,7 +290,7 @@ impl Transaction<'_> {
     /// ```
     pub fn remove_many<T>(&self, keys: &[&str]) -> Result<Vec<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let mut result = Vec::new();
         let mut table = self

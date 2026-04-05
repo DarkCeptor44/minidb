@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use minidb::{KeySource, MiniDB, TableModel};
+use minidb::{KeySource, MiniDB, Table};
 use rand::seq::IndexedRandom;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ struct Restaurant {
     pub id: String,
 }
 
-impl TableModel for Restaurant {
+impl Table for Restaurant {
     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> =
         TableDefinition::new("restaurants");
 
@@ -37,7 +37,7 @@ struct Order {
     pub restaurant_id: String,
 }
 
-impl TableModel for Order {
+impl Table for Order {
     const TABLE: TableDefinition<'_, &'static str, &[u8]> = TableDefinition::new("orders");
 
     fn get_id(&self) -> &str {

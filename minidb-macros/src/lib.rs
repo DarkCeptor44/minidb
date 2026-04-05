@@ -72,7 +72,7 @@ impl MiniDBFieldAttributes {
     }
 }
 
-/// Derives `TableModel` for a struct
+/// Derives `Table` for a struct
 ///
 /// ## Attributes
 ///
@@ -186,7 +186,7 @@ pub fn table_derive(input: TokenStream) -> TokenStream {
     };
 
     let table_model_impl = quote! {
-        impl #impl_generics #crate_path::TableModel for #struct_name #ty_generics #where_clause {
+        impl #impl_generics #crate_path::Table for #struct_name #ty_generics #where_clause {
             const TABLE: #crate_path::redb::TableDefinition<'_, &'static str, &[u8]> = #crate_path::redb::TableDefinition::new(#table_name);
 
             fn get_id(&self) -> &str {

@@ -14,7 +14,7 @@
 //!
 //! * ACID compliant and whatever else [redb] claims
 //! * Automatic serialization/deserialization with [postcard], using [serde]
-//! * Structured key-value storage
+//! * Structured key-value storage with automatic [CUID2](cuid2) IDs
 //! * Type-safe operations (mostly)
 //! * Optional encryption using [XChaCha20Poly1305]
 //! * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
@@ -100,7 +100,7 @@ mod transaction;
 
 pub use crate::{
     builder::{KeySource, MiniDBBuilder},
-    model::{TableIterator, TableModel},
+    model::{Table, TableIterator},
     transaction::Transaction,
 };
 #[cfg(feature = "macros")]
@@ -230,7 +230,7 @@ impl MiniDB {
     /// ```
     pub fn all<T>(&self) -> Result<Vec<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
         let table = txn.open_table(T::TABLE).context("failed to open table")?;
@@ -273,7 +273,7 @@ impl MiniDB {
     /// ```
     pub fn create_table<T>(&self) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         self.create_table_impl(T::TABLE)
     }
@@ -316,7 +316,7 @@ impl MiniDB {
     /// ```
     pub fn export_table<T>(&self, pretty: bool) -> Result<String>
     where
-        T: TableModel,
+        T: Table,
     {
         let all_items: Vec<T> = self.all().context("failed to get all items")?;
         let json = if pretty {
@@ -348,7 +348,7 @@ impl MiniDB {
     /// ```
     pub fn for_each<T, F>(&self, mut f: F) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
         F: FnMut(&T),
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
@@ -395,7 +395,7 @@ impl MiniDB {
     /// ```
     pub fn insert<T>(&self, item: &mut T) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         if item.get_id().trim().is_empty() {
             let id = cuid2::slug();
@@ -449,7 +449,7 @@ impl MiniDB {
     /// ```
     pub fn insert_many<T>(&self, items: &mut [T]) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_write().context("failed to begin write")?;
         {
@@ -501,7 +501,7 @@ impl MiniDB {
     /// ```
     pub fn is_empty<T>(&self) -> Result<bool>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
         let table = txn.open_table(T::TABLE).context("failed to open table")?;
@@ -542,7 +542,7 @@ impl MiniDB {
     /// ```
     pub fn get<T>(&self, id: &str) -> Result<Option<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_read().context("failed to begin read")?;
         let table = txn.open_table(T::TABLE).context("failed to open table")?;
@@ -677,7 +677,7 @@ impl MiniDB {
     /// ```
     pub fn remove<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_write().context("failed to begin write")?;
         let mut result = None;
@@ -729,7 +729,7 @@ impl MiniDB {
     /// ```
     pub fn remove_many<T>(&self, keys: &[&str]) -> Result<Vec<T>>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_write().context("failed to begin write")?;
         let mut result = Vec::new();
@@ -878,7 +878,7 @@ impl MiniDB {
     /// ```
     pub fn update<T>(&self, item: &T) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         if item.get_id().trim().is_empty() {
             return Err(anyhow!("id cannot be empty"));
@@ -935,7 +935,7 @@ impl MiniDB {
     /// ```
     pub fn update_many<T>(&self, items: &[T]) -> Result<()>
     where
-        T: TableModel,
+        T: Table,
     {
         let txn = self.db.begin_write().context("failed to begin write")?;
         {
@@ -985,7 +985,7 @@ impl MiniDB {
     /// ```
     pub fn view_all<T, F, R>(&self, f: F) -> Result<R>
     where
-        T: TableModel,
+        T: Table,
         F: FnOnce(TableIterator<'_, T>) -> R,
     {
         let txn = self.db.begin_read().context("failed to begin read")?;

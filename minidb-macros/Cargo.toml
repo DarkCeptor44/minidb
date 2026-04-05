@@ -1,13 +1,15 @@
 [package]
 name = "minidb-macros"
 version.workspace = true
-description = "Macros for minidb"
+description = "Procedural macros for minidb database wrapper"
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
+keywords = ["macros", "derive", "minidb", "database"]
+categories = ["development-tools::procedural-macros"]
 
 [lib]
 proc-macro = true

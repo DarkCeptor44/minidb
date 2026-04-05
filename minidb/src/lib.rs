@@ -157,11 +157,38 @@ impl MiniDB {
         MiniDBBuilder::new(path)
     }
 
-    pub(crate) fn new(db: Database) -> Self {
+    /// Creates a new [`MiniDB`] from a [`redb::Database`]
+    ///
+    /// If you don't need advanced features then I recommend [`MiniDB::builder`], you can pass the tables to it, the path, and whether or not to use encryption.
+    ///
+    /// ## Arguments
+    ///
+    /// * `db` - The [`redb::Database`] to use
+    ///
+    /// ## Returns
+    ///
+    /// A new [`MiniDB`] with the provided [`redb::Database`]
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// use minidb::MiniDB;
+    ///
+    /// let db = MiniDB::new(redb::Database::open("test.redb").unwrap());
+    /// ```
+    #[must_use]
+    pub fn new(db: Database) -> Self {
         Self { db, cipher: None }
     }
 
-    pub(crate) fn set_cipher(&mut self, cipher: XChaCha20Poly1305) {
+    /// Sets the [`XChaCha20Poly1305`] instance to use, this implies encryption if [Some]
+    ///
+    /// I recommend using [`MiniDB::builder`] and setting the encryption with [`MiniDBBuilder::key_source`] instead
+    ///
+    /// ## Arguments
+    ///
+    /// * `cipher` - The [`XChaCha20Poly1305`] instance to use
+    pub fn set_cipher(&mut self, cipher: XChaCha20Poly1305) {
         self.cipher = Some(cipher);
     }
 

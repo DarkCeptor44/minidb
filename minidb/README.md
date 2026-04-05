@@ -13,9 +13,9 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 
 ## MSRV
 
-| Version | MSRV |
-|---------|------|
-| 0.1.x   | 1.89 |
+| Version | MSRV | Edition |
+| --- | --- | --- |
+| 0.1.x - 0.2.x | 1.89 | 2024 |
 
 ## Installation
 
@@ -23,8 +23,7 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-minidb = { version = "0.1", features = ["macros"] } # or the latest version
-serde = { version = "1", features = ["derive"] }  # needed for minidb
+minidb = { version = "0.2.0", features = ["macros"] } # or whatever the latest version is
 ```
 
 ## Usage

@@ -1,6 +1,6 @@
 [package]
 name = "minidb-macros"
-version = "0.1.0"
+version.workspace = true
 description = "Macros for minidb"
 authors.workspace = true
 edition.workspace = true

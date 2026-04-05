@@ -12,10 +12,21 @@
 //!
 //! ## Key Features
 //!
-//! * Seamless serialization/deserialization with [Postcard](postcard), requiring the table models to implement [serde] `Serialize` and `Deserialize`.
-//! * **Type-Safe Storage:** Provides a structured way to store and retrieve Rust types.
-//! * **Optional Encryption:** Supports encryption via [XChaCha20Poly1305](chacha20poly1305).
-//! * **Procedural Macros:** Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition (provided by `minidb-macros`).
+//! * ACID compliant and whatever else [redb] claims
+//! * Automatic serialization/deserialization with [postcard], using [serde]
+//! * Structured key-value storage
+//! * Type-safe operations (mostly)
+//! * Optional encryption using [XChaCha20Poly1305]
+//! * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
+//! * Re-exports [serde] for convenience
+//! * Re-exports [redb] and some direct/less-opinionated methods for advanced usage
+//! * "Relational" (requires manual management of foreign keys)
+//!
+//! ## MSRV
+//!
+//! | Version | MSRV | Edition |
+//! | --- | --- | --- |
+//! | 0.1.x - 0.2.x | 1.89 | 2024 |
 //!
 //! ## Getting Started
 //!
@@ -23,8 +34,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! minidb = { version = "0.1", features = ["macros"] } # Or just "0.1" if you don't need the derive macros
-//! serde = { version = "1", features = ["derive"] }
+//! minidb = { version = "0.2.0", features = ["macros"] } # Or just "0.2.0" if you don't need the macros
 //! ```
 //!
 //! ## Basic Usage Example

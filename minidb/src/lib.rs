@@ -1,3 +1,7 @@
+#![forbid(unsafe_code)]
+#![warn(clippy::pedantic, missing_docs, missing_debug_implementations)]
+#![allow(clippy::doc_markdown)]
+
 //! # MiniDB
 //!
 //! A minimal-but-functional structured wrapper for [redb] with serialization/deserialization powered by [Postcard](postcard) and [Serde](serde).
@@ -88,10 +92,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this software. If not, see <https://www.gnu.org/licenses/>.
-
-#![forbid(unsafe_code)]
-#![warn(clippy::pedantic, missing_docs)]
-#![allow(clippy::doc_markdown)]
 
 mod builder;
 mod encryption;

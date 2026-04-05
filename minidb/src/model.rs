@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 /// };
 ///
 /// #[derive(Serialize, Deserialize)]
+/// #[serde(crate = "minidb::serde")] // required if using re-exported serde
 /// struct Person {
 ///     id: String,
 ///     name: String,

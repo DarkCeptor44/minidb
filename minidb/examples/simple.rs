@@ -8,6 +8,7 @@ use tempfile::NamedTempFile;
 
 // #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
 // #[minidb(name = "people")]
+// #[serde(crate = "minidb::serde")] // required if using re-exported serde
 // struct Person {
 //     #[key]
 //     id: String,
@@ -16,6 +17,7 @@ use tempfile::NamedTempFile;
 // }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(crate = "minidb::serde")] // required if using re-exported serde
 struct Person {
     id: String,
     name: String,

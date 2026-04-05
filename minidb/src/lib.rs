@@ -43,13 +43,14 @@
 //!
 //! **Note**: This example requires the `macros` feature.
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use minidb::{
 //!     serde::{Deserialize, Serialize},
 //!     MiniDB, Table
 //! };
 //!
 //! #[derive(Table, Serialize, Deserialize, Debug)]
+//! #[serde(crate = "minidb::serde")] // required if using re-exported serde
 //! #[minidb(name = "people")]
 //! struct Person {
 //!     #[key]

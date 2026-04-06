@@ -20,7 +20,7 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 
 | Version | MSRV | Edition |
 | --- | --- | --- |
-| 0.1.x - 0.2.x | 1.89 | 2024 |
+| 0.1.x - 0.3.x | 1.89 | 2024 |
 
 ## Installation
 

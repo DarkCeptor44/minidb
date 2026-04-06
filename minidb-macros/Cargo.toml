@@ -9,7 +9,7 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 keywords = ["macros", "derive", "minidb", "database"]
-categories = ["development-tools::procedural-macros"]
+categories = ["development-tools"]
 
 [lib]
 proc-macro = true

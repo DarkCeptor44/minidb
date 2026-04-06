@@ -34,7 +34,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! minidb = { version = "0.2.0", features = ["macros"] } # Or just "0.2.0" if you don't need the macros
+//! minidb = { version = "0.3.0", features = ["macros"] } # Or just "0.3.0" if you don't need the macros
 //! ```
 //!
 //! ## Basic Usage Example

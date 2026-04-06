@@ -28,7 +28,7 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-minidb = { version = "0.2.0", features = ["macros"] } # or whatever the latest version is
+minidb = { version = "0.3.0", features = ["macros"] } # or whatever the latest version is
 ```
 
 ## Usage

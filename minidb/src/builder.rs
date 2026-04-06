@@ -5,12 +5,10 @@
 use std::{fmt::Debug, path::PathBuf};
 
 use crate::{
-    ArgonKey, META_TABLE, MiniDB, SETTINGS_TABLE, encryption::derive_key_from_password,
-    model::Table,
+    ArgonKey, Error, META_TABLE, MiniDB, SETTINGS_TABLE, encryption::derive_key_from_password,
+    error::Result, model::Table,
 };
-use anyhow::{Context, Result};
-use chacha20poly1305::KeyInit;
-use chacha20poly1305::XChaCha20Poly1305;
+use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
 use redb::{Database, WriteTransaction};
 
 type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
@@ -88,10 +86,14 @@ impl MiniDBBuilder {
     ///
     /// ## Example
     ///
-    /// ```rust,ignore
-    /// use minidb::{MiniDB, Table};
+    /// ```rust,no_run
+    /// use minidb::{
+    ///     MiniDB, Table,
+    ///     serde::{Deserialize, Serialize},
+    /// };
     ///
-    /// #[derive(Table)]
+    /// #[derive(Table, Serialize, Deserialize)]
+    /// #[serde(crate = "minidb::serde")]
     /// struct Person{
     ///     #[key]
     ///     id: String,
@@ -110,7 +112,10 @@ impl MiniDBBuilder {
         self.initializers.push(Box::new(|txn| {
             txn.open_table(T::TABLE)
                 .map(|_| ())
-                .context("failed to init table")?;
+                .map_err(|e| Error::TableInitialization {
+                    name: T::TABLE.to_string(),
+                    source: e,
+                })?;
             Ok(())
         }));
         self
@@ -180,35 +185,36 @@ impl MiniDBBuilder {
     ///     .unwrap();
     /// ```
     pub fn build(self) -> Result<MiniDB> {
-        let db = Database::builder()
-            .create(&self.path)
-            .context("failed to create database file")?;
+        let db = Database::builder().create(&self.path)?;
 
-        let txn = db.begin_write().context("failed to begin bootstrap txn")?;
+        let txn = db.begin_write()?;
         {
             let _ = txn
                 .open_table(META_TABLE)
-                .context("failed to init meta table")?;
+                .map_err(|e| Error::TableInitialization {
+                    name: META_TABLE.to_string(),
+                    source: e,
+                })?;
             let _ = txn
                 .open_table(SETTINGS_TABLE)
-                .context("failed to init settings table")?;
+                .map_err(|e| Error::TableInitialization {
+                    name: SETTINGS_TABLE.to_string(),
+                    source: e,
+                })?;
         }
         for init in self.initializers {
             init(&txn)?;
         }
-        txn.commit().context("failed to commit bootstrap")?;
+        txn.commit()?;
 
         let mut store = MiniDB::new(db);
 
         if let Some(source) = self.key_source {
             let key = match source {
                 KeySource::Password(pass) => {
-                    let salt = store
-                        .get_salt()
-                        .context("failed to get salt from meta table")?;
+                    let salt = store.get_salt()?;
 
-                    derive_key_from_password(&pass, Some(salt), None)
-                        .context("failed to derive key")?
+                    derive_key_from_password(&pass, Some(salt), None)?
                 }
 
                 KeySource::PreDerived(key) => key,

@@ -7,9 +7,9 @@ use std::fmt::Debug;
 use crate::{
     SETTINGS_TABLE,
     encryption::{decrypt_bytes, encrypt_bytes},
+    error::{Error, Result},
     model::Table,
 };
-use anyhow::{Context, Result, anyhow};
 use chacha20poly1305::XChaCha20Poly1305;
 use redb::WriteTransaction;
 use serde::Serialize;
@@ -58,21 +58,16 @@ impl Transaction<'_> {
             item.set_id(id);
         }
 
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
-        let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
+        let bytes = postcard::to_stdvec(item)?;
 
         let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
-            encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table
-            .insert(item.get_id(), to_write.as_slice())
-            .context("failed to insert into table")?;
+        table.insert(item.get_id(), to_write.as_slice())?;
         Ok(())
     }
 
@@ -99,27 +94,22 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
         for item in items {
             if item.get_id().trim().is_empty() {
                 let id = cuid2::slug();
                 item.set_id(id);
             }
 
-            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+            let bytes = postcard::to_stdvec(&item)?;
 
             let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
-                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table
-                .insert(item.get_id(), to_write.as_slice())
-                .context("failed to insert into table")?;
+            table.insert(item.get_id(), to_write.as_slice())?;
         }
         Ok(())
     }
@@ -148,24 +138,19 @@ impl Transaction<'_> {
         T: Table,
     {
         if item.get_id().trim().is_empty() {
-            return Err(anyhow!("id cannot be empty"));
+            return Err(Error::EmptyID);
         }
 
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
-        let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
+        let bytes = postcard::to_stdvec(&item)?;
 
         let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
-            encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table
-            .insert(item.get_id(), to_write.as_slice())
-            .context("failed to update item")?;
+        table.insert(item.get_id(), to_write.as_slice())?;
         Ok(())
     }
 
@@ -192,25 +177,20 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
         for item in items {
             if item.get_id().trim().is_empty() {
-                return Err(anyhow!("id cannot be empty for update"));
+                return Err(Error::EmptyID);
             }
-            let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+            let bytes = postcard::to_stdvec(item)?;
 
             let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
-                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table
-                .insert(item.get_id(), to_write.as_slice())
-                .context("failed to update item")?;
+            table.insert(item.get_id(), to_write.as_slice())?;
         }
         Ok(())
     }
@@ -243,20 +223,15 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
-        let maybe_bytes = table.remove(key).context("failed to remove item")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
+        let maybe_bytes = table.remove(key)?;
 
         if let Some(bytes) = maybe_bytes {
             let item: T = if let Some(cipher) = self.cipher {
-                let decrypted =
-                    decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
-                postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+                let decrypted = decrypt_bytes(cipher, bytes.value())?;
+                postcard::from_bytes(&decrypted)?
             } else {
-                postcard::from_bytes(bytes.value())
-                    .context("failed to deserialize from postcard")?
+                postcard::from_bytes(bytes.value())?
             };
 
             Ok(Some(item))
@@ -293,22 +268,16 @@ impl Transaction<'_> {
         T: Table,
     {
         let mut result = Vec::new();
-        let mut table = self
-            .txn
-            .open_table(T::TABLE)
-            .context("failed to open table")?;
+        let mut table = self.txn.open_table(T::TABLE)?;
         for key in keys {
-            let maybe_bytes = table.remove(key).context("failed to remove item")?;
+            let maybe_bytes = table.remove(key)?;
 
             if let Some(bytes) = maybe_bytes {
                 let item: T = if let Some(cipher) = &self.cipher {
-                    let decrypted =
-                        decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
-                    postcard::from_bytes(&decrypted)
-                        .context("failed to deserialize from postcard")?
+                    let decrypted = decrypt_bytes(cipher, bytes.value())?;
+                    postcard::from_bytes(&decrypted)?
                 } else {
-                    postcard::from_bytes(bytes.value())
-                        .context("failed to deserialize from postcard")?
+                    postcard::from_bytes(bytes.value())?
                 };
 
                 result.push(item);
@@ -341,21 +310,16 @@ impl Transaction<'_> {
     where
         T: Serialize,
     {
-        let mut table = self
-            .txn
-            .open_table(SETTINGS_TABLE)
-            .context("failed to open table")?;
-        let bytes = postcard::to_stdvec(value).context("failed to serialize to postcard")?;
+        let mut table = self.txn.open_table(SETTINGS_TABLE)?;
+        let bytes = postcard::to_stdvec(value)?;
 
         let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
-            encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+            encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table
-            .insert(key, to_write.as_slice())
-            .context("failed to insert into table")?;
+        table.insert(key, to_write.as_slice())?;
         Ok(())
     }
 }

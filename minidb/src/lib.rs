@@ -95,12 +95,14 @@
 
 mod builder;
 mod encryption;
+mod error;
 mod model;
 mod testing;
 mod transaction;
 
 pub use crate::{
     builder::{KeySource, MiniDBBuilder},
+    error::Error,
     model::{Table, TableIterator},
     transaction::Transaction,
 };
@@ -111,8 +113,10 @@ pub use serde;
 
 use std::{fmt::Debug, path::PathBuf};
 
-use crate::encryption::{decrypt_bytes, encrypt_bytes};
-use anyhow::{Context, Result, anyhow};
+use crate::{
+    encryption::{decrypt_bytes, encrypt_bytes},
+    error::Result,
+};
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use chacha20poly1305::XChaCha20Poly1305;
 use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
@@ -233,20 +237,18 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn.open_table(T::TABLE).context("failed to open table")?;
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(T::TABLE)?;
 
         let mut results = Vec::new();
         for item in table.iter()? {
             let (_key, value) = item?;
 
             let decoded: T = if let Some(cipher) = &self.cipher {
-                let decrypted =
-                    decrypt_bytes(cipher, value.value()).context("failed to decrypt bytes")?;
-                postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+                let decrypted = decrypt_bytes(cipher, value.value())?;
+                postcard::from_bytes(&decrypted)?
             } else {
-                postcard::from_bytes(value.value())
-                    .context("failed to deserialize from postcard")?
+                postcard::from_bytes(value.value())?
             };
 
             results.push(decoded);
@@ -287,11 +289,16 @@ impl MiniDB {
         K: redb::Key,
         V: redb::Value,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let _ = txn.open_table(table).context("failed to open table")?;
+            let _ = txn
+                .open_table(table)
+                .map_err(|e| Error::TableInitialization {
+                    name: table.to_string(),
+                    source: e,
+                })?;
         }
-        txn.commit().context("failed to commit write")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -319,13 +326,12 @@ impl MiniDB {
     where
         T: Table,
     {
-        let all_items: Vec<T> = self.all().context("failed to get all items")?;
+        let all_items: Vec<T> = self.all()?;
         let json = if pretty {
             serde_json::to_string_pretty(&all_items)
         } else {
             serde_json::to_string(&all_items)
-        }
-        .context("failed to serialize to JSON")?;
+        }?;
         Ok(json)
     }
 
@@ -352,18 +358,17 @@ impl MiniDB {
         T: Table,
         F: FnMut(&T),
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
+        let txn = self.db.begin_read()?;
         let table = txn.open_table(T::TABLE)?;
 
         for item in table.iter()? {
             let (_, value) = item?;
 
             let data: T = if let Some(cipher) = &self.cipher {
-                let decrypted =
-                    decrypt_bytes(cipher, value.value()).context("failed to decrypt data")?;
-                postcard::from_bytes(&decrypted).context("failed to deserialize postcard")?
+                let decrypted = decrypt_bytes(cipher, value.value())?;
+                postcard::from_bytes(&decrypted)?
             } else {
-                postcard::from_bytes(value.value()).context("failed to deserialize postcard")?
+                postcard::from_bytes(value.value())?
             };
 
             f(&data);
@@ -403,22 +408,20 @@ impl MiniDB {
             item.set_id(id);
         }
 
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+            let mut table = txn.open_table(T::TABLE)?;
+            let bytes = postcard::to_stdvec(item)?;
 
             let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
-                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table
-                .insert(item.get_id(), to_write.as_slice())
-                .context("failed to insert into table")?;
+            table.insert(item.get_id(), to_write.as_slice())?;
         }
-        txn.commit().context("failed to commit to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -452,30 +455,26 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let mut table = txn.open_table(T::TABLE)?;
             for item in items {
                 if item.get_id().trim().is_empty() {
                     let id = cuid2::slug();
                     item.set_id(id);
                 }
 
-                let bytes =
-                    postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
-
+                let bytes = postcard::to_stdvec(&item)?;
                 let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
-                    encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                    encrypt_bytes(cipher, &bytes)?
                 } else {
                     bytes
                 };
 
-                table
-                    .insert(item.get_id(), to_write.as_slice())
-                    .context("failed to insert into table")?;
+                table.insert(item.get_id(), to_write.as_slice())?;
             }
         }
-        txn.commit().context("failed to commit to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -504,11 +503,9 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn.open_table(T::TABLE).context("failed to open table")?;
-        table
-            .is_empty()
-            .context("failed to check if table is empty")
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(T::TABLE)?;
+        Ok(table.is_empty()?)
     }
 
     /// Retrieves an item from a table
@@ -545,20 +542,19 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn.open_table(T::TABLE).context("failed to open table")?;
-        let value = table.get(id).context("failed to get item from store")?;
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(T::TABLE)?;
+        let value = table.get(id)?;
 
         let Some(bytes) = value else {
             return Ok(None);
         };
 
         let item: T = if let Some(cipher) = &self.cipher {
-            let decrypted =
-                decrypt_bytes(cipher, bytes.value()).context("failed to decrypt data")?;
-            postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+            let decrypted = decrypt_bytes(cipher, bytes.value())?;
+            postcard::from_bytes(&decrypted)?
         } else {
-            postcard::from_bytes(bytes.value()).context("failed to deserialize from postcard")?
+            postcard::from_bytes(bytes.value())?
         };
 
         Ok(Some(item))
@@ -566,16 +562,13 @@ impl MiniDB {
 
     /// Retrieves the salt from the meta table
     pub(crate) fn get_salt(&self) -> Result<String> {
-        let value: Option<String> = self
-            .get_meta(META_KEY_SALT)
-            .context("failed to get salt from meta table")?;
+        let value: Option<String> = self.get_meta(META_KEY_SALT)?;
 
         if let Some(salt) = value {
             Ok(salt)
         } else {
             let new_salt_string = SaltString::generate(&mut OsRng);
-            self.set_meta(META_KEY_SALT, &new_salt_string.to_string())
-                .context("failed to put salt in meta table")?;
+            self.set_meta(META_KEY_SALT, &new_salt_string.to_string())?;
             Ok(new_salt_string.to_string())
         }
     }
@@ -585,13 +578,12 @@ impl MiniDB {
     where
         T: for<'a> Deserialize<'a>,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn.open_table(META_TABLE).context("failed to open table")?;
-        let value = table.get(key).context("failed to get item from store")?;
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(META_TABLE)?;
+        let value = table.get(key)?;
 
         if let Some(bytes) = value {
-            let item: T = postcard::from_bytes(bytes.value())
-                .context("failed to deserialize from postcard")?;
+            let item: T = postcard::from_bytes(bytes.value())?;
             Ok(Some(item))
         } else {
             Ok(None)
@@ -627,22 +619,19 @@ impl MiniDB {
     where
         T: for<'a> Deserialize<'a>,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn
-            .open_table(SETTINGS_TABLE)
-            .context("failed to open table")?;
-        let value = table.get(key).context("failed to get item from store")?;
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(SETTINGS_TABLE)?;
+        let value = table.get(key)?;
 
         let Some(bytes) = value else {
             return Ok(None);
         };
 
         let item: T = if let Some(cipher) = &self.cipher {
-            let decrypted =
-                decrypt_bytes(cipher, bytes.value()).context("failed to decrypt data")?;
-            postcard::from_bytes(&decrypted).context("failed to deserialize from postcard")?
+            let decrypted = decrypt_bytes(cipher, bytes.value())?;
+            postcard::from_bytes(&decrypted)?
         } else {
-            postcard::from_bytes(bytes.value()).context("failed to deserialize from postcard")?
+            postcard::from_bytes(bytes.value())?
         };
 
         Ok(Some(item))
@@ -680,27 +669,24 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         let mut result = None;
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let maybe_bytes = table.remove(key).context("failed to remove item")?;
+            let mut table = txn.open_table(T::TABLE)?;
+            let maybe_bytes = table.remove(key)?;
 
             if let Some(bytes) = maybe_bytes {
                 let item: T = if let Some(cipher) = &self.cipher {
-                    let decrypted =
-                        decrypt_bytes(cipher, bytes.value()).context("failed to decrypt bytes")?;
-                    postcard::from_bytes(&decrypted)
-                        .context("failed to deserialize from postcard")?
+                    let decrypted = decrypt_bytes(cipher, bytes.value())?;
+                    postcard::from_bytes(&decrypted)?
                 } else {
-                    postcard::from_bytes(bytes.value())
-                        .context("failed to deserialize from postcard")?
+                    postcard::from_bytes(bytes.value())?
                 };
 
                 result = Some(item);
             }
         }
-        txn.commit().context("failed to commit write")?;
+        txn.commit()?;
         Ok(result)
     }
 
@@ -732,29 +718,26 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         let mut result = Vec::new();
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let mut table = txn.open_table(T::TABLE)?;
             for key in keys {
-                let maybe_bytes = table.remove(key).context("failed to remove item")?;
+                let maybe_bytes = table.remove(key)?;
 
                 if let Some(bytes) = maybe_bytes {
                     let item: T = if let Some(cipher) = &self.cipher {
-                        let decrypted = decrypt_bytes(cipher, bytes.value())
-                            .context("failed to decrypt bytes")?;
-                        postcard::from_bytes(&decrypted)
-                            .context("failed to deserialize from postcard")?
+                        let decrypted = decrypt_bytes(cipher, bytes.value())?;
+                        postcard::from_bytes(&decrypted)?
                     } else {
-                        postcard::from_bytes(bytes.value())
-                            .context("failed to deserialize from postcard")?
+                        postcard::from_bytes(bytes.value())?
                     };
 
                     result.push(item);
                 }
             }
         }
-        txn.commit().context("failed to commit write")?;
+        txn.commit()?;
         Ok(result)
     }
 
@@ -763,15 +746,13 @@ impl MiniDB {
     where
         T: Serialize,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn.open_table(META_TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(value).context("failed to serialize to postcard")?;
-            table
-                .insert(key, bytes.as_slice())
-                .context("failed to insert into table")?;
+            let mut table = txn.open_table(META_TABLE)?;
+            let bytes = postcard::to_stdvec(value)?;
+            table.insert(key, bytes.as_slice())?;
         }
-        txn.commit().context("failed to commit to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -796,24 +777,20 @@ impl MiniDB {
     where
         T: Serialize,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn
-                .open_table(SETTINGS_TABLE)
-                .context("failed to open table")?;
-            let bytes = postcard::to_stdvec(value).context("failed to serialize to postcard")?;
+            let mut table = txn.open_table(SETTINGS_TABLE)?;
+            let bytes = postcard::to_stdvec(value)?;
 
             let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
-                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table
-                .insert(key, to_write.as_slice())
-                .context("failed to insert into table")?;
+            table.insert(key, to_write.as_slice())?;
         }
-        txn.commit().context("failed to commit to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -839,17 +816,14 @@ impl MiniDB {
     where
         F: FnOnce(&Transaction) -> Result<R>,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         let transaction = Transaction {
             txn,
             cipher: self.cipher.as_ref(),
         };
 
         let result = f(&transaction)?;
-        transaction
-            .txn
-            .commit()
-            .context("failed to commit transaction")?;
+        transaction.txn.commit()?;
         Ok(result)
     }
 
@@ -882,25 +856,23 @@ impl MiniDB {
         T: Table,
     {
         if item.get_id().trim().is_empty() {
-            return Err(anyhow!("id cannot be empty"));
+            return Err(Error::EmptyID);
         }
 
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
-            let bytes = postcard::to_stdvec(&item).context("failed to serialize to postcard")?;
+            let mut table = txn.open_table(T::TABLE)?;
+            let bytes = postcard::to_stdvec(&item)?;
 
             let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
-                encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table
-                .insert(item.get_id(), to_write.as_slice())
-                .context("failed to update item")?;
+            table.insert(item.get_id(), to_write.as_slice())?;
         }
-        txn.commit().context("failed to commit write to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -938,27 +910,25 @@ impl MiniDB {
     where
         T: Table,
     {
-        let txn = self.db.begin_write().context("failed to begin write")?;
+        let txn = self.db.begin_write()?;
         {
-            let mut table = txn.open_table(T::TABLE).context("failed to open table")?;
+            let mut table = txn.open_table(T::TABLE)?;
             for item in items {
                 if item.get_id().trim().is_empty() {
-                    return Err(anyhow!("id cannot be empty for update"));
+                    return Err(Error::EmptyID);
                 }
-                let bytes = postcard::to_stdvec(item).context("failed to serialize to postcard")?;
+                let bytes = postcard::to_stdvec(item)?;
 
                 let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
-                    encrypt_bytes(cipher, &bytes).context("failed to encrypt bytes")?
+                    encrypt_bytes(cipher, &bytes)?
                 } else {
                     bytes
                 };
 
-                table
-                    .insert(item.get_id(), to_write.as_slice())
-                    .context("failed to update item")?;
+                table.insert(item.get_id(), to_write.as_slice())?;
             }
         }
-        txn.commit().context("failed to commit to database")?;
+        txn.commit()?;
         Ok(())
     }
 
@@ -989,8 +959,8 @@ impl MiniDB {
         T: Table,
         F: FnOnce(TableIterator<'_, T>) -> R,
     {
-        let txn = self.db.begin_read().context("failed to begin read")?;
-        let table = txn.open_table(T::TABLE).context("failed to open table")?;
+        let txn = self.db.begin_read()?;
+        let table = txn.open_table(T::TABLE)?;
         let mut iter = TableIterator::new(table.iter()?);
 
         if let Some(cipher) = &self.cipher {

@@ -2,8 +2,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::ArgonKey;
-use anyhow::{Context, Result, anyhow};
+use crate::{ArgonKey, Error, error::Result};
 use argon2::{
     Algorithm, Argon2, Params as ArgonParams, PasswordHasher, Version,
     password_hash::{SaltString, rand_core::RngCore},
@@ -26,7 +25,7 @@ use chacha20poly1305::{
 ///
 /// ## Errors
 ///
-/// Returns an error if the decryption fails
+/// Returns an error if the decryption fails or if the ciphertext is too short
 pub fn decrypt_bytes<C>(cipher: &XChaCha20Poly1305, ciphertext: C) -> Result<Vec<u8>>
 where
     C: AsRef<[u8]>,
@@ -36,16 +35,13 @@ where
 
 fn decrypt_bytes_impl(cipher: &XChaCha20Poly1305, ciphertext: &[u8]) -> Result<Vec<u8>> {
     if ciphertext.len() < 24 {
-        return Err(anyhow!("ciphertext too short: 24 bytes required"));
+        return Err(Error::CipherTextTooShort(ciphertext.len()));
     }
 
     let (nonce_bytes, ciphertext) = ciphertext.split_at(24);
     let nonce_array: [u8; 24] = nonce_bytes.try_into().unwrap();
     let nonce = XNonce::from(nonce_array);
-    let plaintext = cipher
-        .decrypt(&nonce, ciphertext.as_ref())
-        .map_err(|e| anyhow!(e))
-        .context("failed to decrypt data")?;
+    let plaintext = cipher.decrypt(&nonce, ciphertext.as_ref())?;
 
     Ok(plaintext)
 }
@@ -87,24 +83,17 @@ fn derive_key_from_password_impl(
         let salt_str = SaltString::generate(&mut OsRng);
         salt_str.to_string()
     });
-    let salt = SaltString::from_b64(&salt_string)
-        .map_err(|e| anyhow!(e))
-        .context("failed to parse String into SaltString")?;
+    let salt = SaltString::from_b64(&salt_string)?;
 
     let params = params.unwrap_or_default();
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let hash_output = argon2
-        .hash_password(password.as_bytes(), &salt)
-        .map_err(|e| anyhow!(e))
-        .context("failed to hash password with salt")?
-        .hash;
-
-    let Some(bytes) = hash_output else {
-        return Err(anyhow!("failed to hash password with salt"));
-    };
+    let bytes = argon2
+        .hash_password(password.as_bytes(), &salt)?
+        .hash
+        .ok_or(Error::MissingHashOutput)?;
 
     if bytes.len() != 32 {
-        return Err(anyhow!("derived key length mismatch, expected 32 bytes"));
+        return Err(Error::KeyLengthMismatch(bytes.len()));
     }
 
     let mut key = [0u8; 32];
@@ -139,10 +128,7 @@ fn encrypt_bytes_impl(cipher: &XChaCha20Poly1305, plaintext: &[u8]) -> Result<Ve
     rng.fill_bytes(&mut nonce_bytes);
     let nonce = XNonce::from(nonce_bytes);
 
-    let ciphertext = cipher
-        .encrypt(&nonce, plaintext.as_ref())
-        .map_err(|e| anyhow!(e))
-        .context("failed to encrypt data")?;
+    let ciphertext = cipher.encrypt(&nonce, plaintext.as_ref())?;
     let mut result = Vec::with_capacity(nonce_bytes.len() + ciphertext.len());
     result.extend_from_slice(&nonce_bytes);
     result.extend_from_slice(&ciphertext);

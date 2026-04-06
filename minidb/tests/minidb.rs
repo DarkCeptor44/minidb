@@ -71,11 +71,11 @@ impl CliDb {
             return Err(anyhow!("Restaurant not found"));
         }
 
-        self.insert(order)
+        Ok(self.insert(order)?)
     }
 
     pub fn all_restaurants(&self) -> Result<Vec<Restaurant>> {
-        self.all()
+        Ok(self.all()?)
     }
 }
 
@@ -543,7 +543,10 @@ fn test_minidb_view_all() {
 
     let first_five: Vec<Restaurant> = db
         .view_all::<Restaurant, _, _>(|iter| {
-            iter.skip(100).take(5).collect::<Result<Vec<_>>>().unwrap()
+            iter.skip(100)
+                .take(5)
+                .collect::<Result<Vec<_>, minidb::Error>>()
+                .unwrap()
         })
         .expect("failed to get first five");
 

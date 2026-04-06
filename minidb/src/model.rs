@@ -4,8 +4,10 @@
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::encryption::decrypt_bytes;
-use anyhow::Context;
+use crate::{
+    encryption::decrypt_bytes,
+    error::{Error, Result},
+};
 use chacha20poly1305::XChaCha20Poly1305;
 use redb::{Range, TableDefinition};
 use serde::{Deserialize, Serialize};
@@ -103,7 +105,7 @@ impl<T> Iterator for TableIterator<'_, T>
 where
     T: for<'de> Deserialize<'de>,
 {
-    type Item = anyhow::Result<T>;
+    type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let result = self.inner.next()?;
@@ -111,7 +113,7 @@ where
         match result {
             Ok((_key, value)) => {
                 let bytes = if let Some(cipher) = &self.cipher {
-                    match decrypt_bytes(cipher, value.value()).context("failed to decrypt bytes") {
+                    match decrypt_bytes(cipher, value.value()) {
                         Ok(d) => d,
                         Err(e) => return Some(Err(e)),
                     }
@@ -121,10 +123,10 @@ where
 
                 match postcard::from_bytes(&bytes) {
                     Ok(item) => Some(Ok(item)),
-                    Err(e) => Some(Err(e.into())),
+                    Err(e) => Some(Err(Error::Serialization(e))),
                 }
             }
-            Err(e) => Some(Err(e.into())),
+            Err(e) => Some(Err(Error::Storage(e))),
         }
     }
 }

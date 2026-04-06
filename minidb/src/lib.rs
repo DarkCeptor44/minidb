@@ -257,6 +257,38 @@ impl MiniDB {
         Ok(results)
     }
 
+    /// Force a check of the integrity of the database file, and repair it if possible.
+    ///
+    /// Note: Calling this function is unnecessary during normal operation. redb will automatically
+    /// detect and recover from crashes, power loss, and other unclean shutdowns. This function is
+    /// quite slow and should only be used when you suspect the database file may have been modified
+    /// externally to redb, or that a redb bug may have left the database in a corrupted state.
+    ///
+    /// ## Returns
+    ///
+    /// `Ok(true)` if the database passed integrity checks, `Ok(false)` if it failed but was repaired,
+    /// and `Err(Corrupted)` if the check failed and the file could not be repaired
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the check fails and the file could not be repaired
+    pub fn check_integrity(&mut self) -> Result<bool> {
+        Ok(self.db.check_integrity()?)
+    }
+
+    /// Compacts the database file
+    ///
+    /// ## Returns
+    ///
+    /// `Ok(true)` if compacting was performed, and `Ok(false)` if no further compacting was possible
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the compacting fails
+    pub fn compact(&mut self) -> Result<bool> {
+        Ok(self.db.compact()?)
+    }
+
     /// Creates the table if it doesn't exist
     ///
     /// Recommended to use [`MiniDBBuilder::table`] instead.

@@ -1,0 +1,24 @@
+from_latest_tag = true
+ignore_merge_commits = true
+skip_untracked = true
+tag_prefix = "v"
+
+[commit_types]
+feat = { changelog_title = "Features" }
+fix = { changelog_title = "Bug Fixes" }
+perf = { changelog_title = "Performance" }
+refactor = { changelog_title = "Refactors" }
+chore = { omit_from_changelog = true }
+test = { omit_from_changelog = true }
+docs = { omit_from_changelog = true }
+
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+owner = "DarkCeptor44"
+repository = "minidb"
+authors = [{ signature = "Murilo Pagliuso", username = "DarkCeptor44" }]
+
+[bump_profiles.default]
+pre_bump_hooks = ["cargo test", "cargo clippy", "cargo fmt --check"]

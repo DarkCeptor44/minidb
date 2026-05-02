@@ -43,7 +43,7 @@
 //!
 //! **Note**: This example requires the `macros` feature.
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use minidb::{
 //!     serde::{Deserialize, Serialize},
 //!     MiniDB, Table

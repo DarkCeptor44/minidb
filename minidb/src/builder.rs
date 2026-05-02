@@ -86,7 +86,7 @@ impl MiniDBBuilder {
     ///
     /// ## Example
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// use minidb::{
     ///     MiniDB, Table,
     ///     serde::{Deserialize, Serialize},

@@ -28,7 +28,7 @@ In your `Cargo.toml`:
 
 ```toml
 [dependencies]
-minidb = { version = "0.3.0", features = ["macros"] } # or whatever the latest version is
+minidb = { version = "0.4.0", features = ["macros"] } # or whatever the latest version is
 ```
 
 ## Usage
@@ -76,7 +76,7 @@ From [cargo-audit](https://crates.io/crates/cargo-audit):
 
 | **Version** | **Vulnerabilities** |
 | --- | --- |
-| v0.3.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089)) |
+| v0.4.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089)) |
 
 * I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 

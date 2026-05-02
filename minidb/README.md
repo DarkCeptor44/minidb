@@ -74,27 +74,11 @@ if let Some(new_person) = new_person {
 
 From [cargo-audit](https://crates.io/crates/cargo-audit):
 
-```bash
-$ cargo audit
-    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
-      Loaded 1026 security advisories (from C:\Users\darkceptor44\.cargo\advisory-db)
-    Updating crates.io index
-    Scanning Cargo.lock for vulnerabilities (134 crate dependencies)
-Crate:     atomic-polyfill
-Version:   1.0.3
-Warning:   unmaintained
-Title:     atomic-polyfill is unmaintained
-Date:      2023-07-11
-ID:        RUSTSEC-2023-0089
-URL:       https://rustsec.org/advisories/RUSTSEC-2023-0089
-Dependency tree:
-atomic-polyfill 1.0.3
-└── heapless 0.7.17
-    └── postcard 1.1.3
-        └── minidb 0.2.0
+| **Version** | **Vulnerabilities** |
+| --- | --- |
+| v0.3.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089)) |
 
-warning: 1 allowed warning found
-```
+* I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 
 ## Tests
 

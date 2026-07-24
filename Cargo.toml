@@ -13,7 +13,7 @@ repository = "https://github.com/DarkCeptor44/minidb"
 
 [workspace.dependencies]
 # minidb
-anyhow = "1.0.100"
+anyhow = "1.0.103"
 argon2 = "0.5.3"
 chacha20poly1305 = "0.10.1"
 cuid2 = "0.1.6"

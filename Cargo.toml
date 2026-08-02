@@ -15,7 +15,7 @@ repository = "https://github.com/DarkCeptor44/minidb"
 # minidb
 anyhow = "1.0.103"
 argon2 = "0.5.3"
-chacha20poly1305 = "0.10.1"
+chacha20poly1305 = "0.11.0"
 cuid2 = "0.1.6"
 divan = "0.1.21"
 minidb-macros = { version = "0.4.0", path = "./minidb-macros" }
@@ -32,7 +32,7 @@ heck = "0.5.0"
 proc-macro2 = "1.0.106"
 proc-macro-crate = "3.4.0"
 quote = "1.0.44"
-syn = "2.0.114"
+syn = "3.0.3"
 
 # for -Zminimal-versions
 num = "0.4.3"

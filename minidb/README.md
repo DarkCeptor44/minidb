@@ -20,7 +20,7 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 
 | Version | MSRV | Edition |
 | --- | --- | --- |
-| 0.1.x - 0.3.x | 1.89 | 2024 |
+| <= 0.4.0 | 1.89 | 2024 |
 
 ## Installation
 
@@ -72,11 +72,9 @@ if let Some(new_person) = new_person {
 
 ## Audits
 
-From [cargo-audit](https://crates.io/crates/cargo-audit):
-
-| **Version** | **Vulnerabilities** |
-| --- | --- |
-| v0.4.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089)) |
+| **Auditor** | **Audit Date** | **Version** | **Vulnerabilities** |
+| --- | --- | --- | --- |
+| [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-08-01 | 0.4.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
 
 * I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 

@@ -56,7 +56,7 @@ fn test_minidb_with_encryption_insert() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r = Restaurant { id: String::new() };
@@ -86,7 +86,7 @@ fn test_minidb_with_encryption_insert_many() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants: Vec<Restaurant> =
@@ -114,7 +114,7 @@ fn test_minidb_with_encryption_update() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r1 = Restaurant { id: String::new() };
@@ -152,7 +152,7 @@ fn test_minidb_with_encryption_update_many() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r1 = Restaurant { id: String::new() };
@@ -196,7 +196,7 @@ fn test_minidb_with_encryption_get() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -227,7 +227,7 @@ fn test_minidb_with_encryption_get_non_existent() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -251,7 +251,7 @@ fn test_minidb_with_encryption_all() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -274,7 +274,7 @@ fn test_minidb_with_encryption_all_from_empty_table() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let all_restaurants = db
@@ -292,7 +292,7 @@ fn test_minidb_with_encryption_remove() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -327,7 +327,7 @@ fn test_minidb_with_encryption_remove_many() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -358,7 +358,7 @@ fn test_minidb_with_encryption_for_each() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -381,7 +381,7 @@ fn test_minidb_with_encryption_settings() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     assert!(
@@ -412,7 +412,7 @@ fn test_minidb_with_encryption_export_table() {
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -437,7 +437,7 @@ fn test_minidb_with_encryption_is_empty() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to create storage");
 
     assert!(db.is_empty::<Restaurant>().unwrap());
@@ -449,7 +449,7 @@ fn test_minidb_with_encryption_view_all() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .key_source(KeySource::PreDerived(KEY))
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut rests = Vec::new();

@@ -85,7 +85,7 @@ fn test_minidb_insert() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r = Restaurant { id: String::new() };
@@ -114,7 +114,7 @@ fn test_minidb_insert_many() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants: Vec<Restaurant> =
@@ -141,7 +141,7 @@ fn test_minidb_update() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r1 = Restaurant { id: String::new() };
@@ -178,7 +178,7 @@ fn test_minidb_update_many() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r1 = Restaurant { id: String::new() };
@@ -221,7 +221,7 @@ fn test_minidb_get() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -251,7 +251,7 @@ fn test_minidb_get_non_existent() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -274,7 +274,7 @@ fn test_minidb_all() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -296,7 +296,7 @@ fn test_minidb_all_from_empty_table() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let all_restaurants = db
@@ -313,7 +313,7 @@ fn test_minidb_remove() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -347,7 +347,7 @@ fn test_minidb_remove_many() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -377,7 +377,7 @@ fn test_minidb_for_each() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -399,7 +399,7 @@ fn test_minidb_settings() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     assert!(
@@ -429,7 +429,7 @@ fn test_minidb_export_table() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut restaurants = Vec::new();
@@ -456,7 +456,7 @@ fn test_minidb_place_order() {
         storage: MiniDB::builder(temp_file.path())
             .table::<Restaurant>()
             .table::<Order>()
-            .build()
+            .open()
             .expect("failed to create storage"),
     };
     let mut r = Restaurant {
@@ -490,7 +490,7 @@ fn test_minidb_is_empty() {
     let db = CliDb {
         storage: MiniDB::builder(temp_file.path())
             .table::<Restaurant>()
-            .build()
+            .open()
             .expect("failed to create storage"),
     };
 
@@ -503,7 +503,7 @@ fn test_minidb_transaction() {
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut r = Restaurant {
@@ -530,7 +530,7 @@ fn test_minidb_view_all() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Restaurant>()
-        .build()
+        .open()
         .expect("failed to build store");
 
     let mut rests = Vec::new();

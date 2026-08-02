@@ -50,7 +50,7 @@ struct Person {
 
 let db = MiniDB::builder("path/to/db")
       .table::<Person>()
-      .build()
+      .open()
       .unwrap();
 
 // insert a person

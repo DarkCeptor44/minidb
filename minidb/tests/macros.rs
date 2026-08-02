@@ -25,7 +25,7 @@ fn test_minidb_with_macros_insert() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .expect("failed to create database");
 
     let mut p = Person {

@@ -43,7 +43,7 @@ fn main() {
     // 1. Create a new database without encryption and only one table (Person)
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     // 2. Insert a new person

@@ -63,7 +63,7 @@
 //!     // create/open the database, registering the `Person` table
 //!     let db = MiniDB::builder("path/to/my_db.redb")
 //!         .table::<Person>()
-//!         .build()?;
+//!         .open()?;
 //!
 //!     // create a new Person (ID will be generated automatically so the field should be empty)
 //!     let mut person_to_insert = Person {

@@ -26,7 +26,7 @@ type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
 /// let db = MiniDBBuilder::new("test.redb")
 ///     .table::<Person>() // you must register all table models
 ///     .table::<Car>()
-///     .build()
+///     .open()
 ///     .unwrap();
 /// ```
 pub struct MiniDBBuilder {
@@ -162,7 +162,7 @@ impl MiniDBBuilder {
         self
     }
 
-    /// Builds the [`MiniDB`] from the builder
+    /// Opens the MiniDB database
     ///
     /// ## Returns
     ///
@@ -181,10 +181,10 @@ impl MiniDBBuilder {
     /// let db = MiniDB::builder("test.redb")
     ///     // skipping table registering for convenience
     ///     .key_source(KeySource::Password("secretpassword".to_string())) // if you want the database to be encrypted
-    ///     .build()
+    ///     .open()
     ///     .unwrap();
     /// ```
-    pub fn build(self) -> Result<MiniDB> {
+    pub fn open(self) -> Result<MiniDB> {
         let db = Database::builder().create(&self.path)?;
 
         let txn = db.begin_write()?;

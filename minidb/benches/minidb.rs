@@ -38,7 +38,7 @@ fn new(b: Bencher) {
         .bench_values(|temp_file| {
             let db = MiniDB::builder(temp_file.path())
                 .table::<Person>()
-                .build()
+                .open()
                 .unwrap();
             black_box(db);
         });
@@ -50,7 +50,7 @@ fn insert_into_fresh_db(b: Bencher) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let p = Person {
@@ -71,7 +71,7 @@ fn insert_into_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| Person {
@@ -90,7 +90,7 @@ fn insert_many_into_fresh_db(b: Bencher, n: usize) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let mut people = Vec::with_capacity(n);
@@ -113,7 +113,7 @@ fn insert_many_into_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -138,7 +138,7 @@ fn update_into_fresh_db(b: Bencher) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let mut p = Person {
@@ -163,7 +163,7 @@ fn update_into_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -190,7 +190,7 @@ fn update_many_into_fresh_db(b: Bencher, n: usize) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let mut people = Vec::with_capacity(n);
@@ -217,7 +217,7 @@ fn update_many_into_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -245,7 +245,7 @@ fn get(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut person = Person {
@@ -268,7 +268,7 @@ fn get_one_from_large_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut people = Vec::with_capacity(n);
@@ -296,7 +296,7 @@ fn all(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut people = Vec::with_capacity(n);
@@ -321,7 +321,7 @@ fn remove_from_fresh_db(b: Bencher) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let mut p = Person {
@@ -344,7 +344,7 @@ fn remove_from_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -369,7 +369,7 @@ fn remove_many_from_fresh_db(b: Bencher, n: usize) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let mut people = Vec::with_capacity(n);
@@ -398,7 +398,7 @@ fn remove_many_from_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -428,7 +428,7 @@ fn for_each(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut people = Vec::with_capacity(n);
@@ -456,7 +456,7 @@ fn export_table(b: Bencher, args: (usize, bool)) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut people = Vec::with_capacity(n);
@@ -481,7 +481,7 @@ fn is_empty(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     let mut people = Vec::with_capacity(1000);
@@ -503,7 +503,7 @@ fn is_empty(b: Bencher) {
 #[divan::bench]
 fn create_table(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path()).build().unwrap();
+    let db = MiniDB::builder(temp_file.path()).open().unwrap();
 
     b.bench(|| db.create_table::<Person>().unwrap());
 }
@@ -513,7 +513,7 @@ fn get_setting(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     db.set_setting("test", &1234).unwrap();
@@ -529,7 +529,7 @@ fn set_setting(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
     let db = MiniDB::builder(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     b.with_inputs(|| {
@@ -547,7 +547,7 @@ fn transaction(b: Bencher) {
         let temp_file = NamedTempFile::new().unwrap();
         let db = MiniDB::builder(temp_file.path())
             .table::<Person>()
-            .build()
+            .open()
             .unwrap();
 
         let p1 = Person {

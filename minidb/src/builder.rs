@@ -172,6 +172,47 @@ impl MiniDBBuilder {
         self
     }
 
+    /// Sets the key source, if it's set to [None], the database will not be encrypted
+    ///
+    /// ## Arguments
+    ///
+    /// * `source` - The key source, can be a password, a pre-derived key, or a function that returns a key (`[u8; 32]`), if it's set to [None], the database will not be encrypted
+    ///
+    /// ## Returns
+    ///
+    /// A new [`MiniDBBuilder`]
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// use minidb::{KeySource, MiniDB};
+    ///
+    /// // create a MiniDB builder with a password
+    /// let db = MiniDB::builder().path("test.redb")
+    ///     // skipping table registering for convenience
+    ///     .key_source(Some(KeySource::Password("secretpassword".to_string())));
+    ///
+    /// // create a MiniDB builder with a pre-derived key
+    /// let key = [1u8; 32];
+    /// let db = MiniDB::builder().path("test.redb")
+    ///     // skipping table registering for convenience
+    ///     .key_source(Some(KeySource::PreDerived(key)));
+    ///
+    /// // create a MiniDB builder with a function that returns a key
+    /// fn key_provider() -> [u8; 32] {
+    ///     [1u8; 32]
+    /// }
+    ///
+    /// let db = MiniDB::builder().path("test.redb")
+    ///     // skipping table registering for convenience
+    ///     .key_source(Some(KeySource::ExternalKeyProvider(Box::new(key_provider))));
+    /// ```
+    #[must_use]
+    pub fn set_key_source(mut self, source: Option<KeySource>) -> Self {
+        self.key_source = source;
+        self
+    }
+
     /// Sets the path to the database file
     ///
     /// ## Arguments
@@ -200,6 +241,34 @@ impl MiniDBBuilder {
         self
     }
 
+    /// Sets the path to the database file, if this and IPC is set to [None], the database will fail on [open](MiniDBBuilder::open)
+    ///
+    /// ## Arguments
+    ///
+    /// * `path` - The path to the database file
+    ///
+    /// ## Returns
+    ///
+    /// A new [`MiniDBBuilder`]
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// use minidb::MiniDB;
+    ///
+    /// // create a MiniDB with a local database path
+    /// let db = MiniDB::builder()
+    ///     .set_path(Some("test.redb"));
+    /// ```
+    #[must_use]
+    pub fn set_path<P>(mut self, path: Option<P>) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.path = path.map(Into::into);
+        self
+    }
+
     /// Sets the path to the IPC server
     ///
     /// ## Arguments
@@ -225,6 +294,34 @@ impl MiniDBBuilder {
         P: Into<PathBuf>,
     {
         self.ipc_path = Some(path.into());
+        self
+    }
+
+    /// Sets the path to the IPC server, if this and path is set to [None], the database will fail on [open](MiniDBBuilder::open)
+    ///
+    /// ## Arguments
+    ///
+    /// * `path` - The path to the IPC server
+    ///
+    /// ## Returns
+    ///
+    /// A new [`MiniDBBuilder`]
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// use minidb::MiniDB;
+    ///
+    /// // create a MiniDB with an IPC server path
+    /// let db = MiniDB::builder()
+    ///     .set_ipc_path(Some(r"\\.\pipe\minidb"));
+    /// ```
+    #[must_use]
+    pub fn set_ipc_path<P>(mut self, path: Option<P>) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.ipc_path = path.map(Into::into);
         self
     }
 

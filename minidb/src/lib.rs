@@ -680,7 +680,7 @@ impl MiniDB {
                 match client.send_request(&IpcRequest::IsEmpty {
                     table: T::TABLE.to_string(),
                 })? {
-                    IpcResponse::IsEmpty(is_empty) => Ok(is_empty),
+                    IpcResponse::Bool(is_empty) => Ok(is_empty),
                     IpcResponse::Error(e) => Err(Error::Ipc(e)),
                     _ => Err(Error::UnexpectedIpcResponse),
                 }

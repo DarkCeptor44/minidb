@@ -188,10 +188,10 @@ impl MiniDB {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use minidb::{MiniDB, IpcClient};
     ///
-    /// let db = MiniDB::from_ipc_client(IpcClient::connect(r"\\.\pipe\minidb"));
+    /// let db = MiniDB::from_ipc_client(IpcClient::connect(r"\\.\pipe\minidb").unwrap());
     /// ```
     pub fn from_ipc_client(client: IpcClient) -> Self {
         Self {
@@ -214,7 +214,7 @@ impl MiniDB {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use minidb::MiniDB;
     /// use redb::Database;
     ///

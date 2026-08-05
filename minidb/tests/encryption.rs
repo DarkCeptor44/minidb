@@ -52,7 +52,8 @@ impl Table for Order {
 #[test]
 fn test_minidb_with_encryption_insert() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -82,7 +83,8 @@ fn test_minidb_with_encryption_insert_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -110,7 +112,8 @@ fn test_minidb_with_encryption_insert_many() {
 #[test]
 fn test_minidb_with_encryption_update() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -148,7 +151,8 @@ fn test_minidb_with_encryption_update_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -192,7 +196,8 @@ fn test_minidb_with_encryption_get() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -223,7 +228,8 @@ fn test_minidb_with_encryption_get_non_existent() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -247,7 +253,8 @@ fn test_minidb_with_encryption_all() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -270,7 +277,8 @@ fn test_minidb_with_encryption_all() {
 #[test]
 fn test_minidb_with_encryption_all_from_empty_table() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -288,7 +296,8 @@ fn test_minidb_with_encryption_remove() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -323,7 +332,8 @@ fn test_minidb_with_encryption_remove_many() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -354,7 +364,8 @@ fn test_minidb_with_encryption_for_each() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -377,7 +388,8 @@ fn test_minidb_with_encryption_for_each() {
 #[test]
 fn test_minidb_with_encryption_settings() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -408,7 +420,8 @@ fn test_minidb_with_encryption_export_table() {
     const N: usize = 1000;
 
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
         .key_source(KeySource::PreDerived(KEY))
@@ -434,7 +447,8 @@ fn test_minidb_with_encryption_export_table() {
 #[test]
 fn test_minidb_with_encryption_is_empty() {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -446,7 +460,8 @@ fn test_minidb_with_encryption_is_empty() {
 #[test]
 fn test_minidb_with_encryption_view_all() {
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Restaurant>()
         .key_source(KeySource::PreDerived(KEY))
         .open()

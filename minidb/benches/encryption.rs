@@ -38,7 +38,8 @@ fn main() {
 fn new(b: Bencher) {
     b.with_inputs(|| NamedTempFile::new().unwrap())
         .bench_values(|temp_file| {
-            let db = MiniDB::builder(temp_file.path())
+            let db = MiniDB::builder()
+                .path(temp_file.path())
                 .table::<Person>()
                 .key_source(KeySource::PreDerived(KEY))
                 .open()
@@ -51,7 +52,8 @@ fn new(b: Bencher) {
 fn insert_into_fresh_db(b: Bencher) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -73,7 +75,8 @@ fn insert_into_fresh_db(b: Bencher) {
 #[divan::bench(name = "insert (existing db)")]
 fn insert_into_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -93,7 +96,8 @@ fn insert_into_existing_db(b: Bencher) {
 fn insert_many_into_fresh_db(b: Bencher, n: usize) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -117,7 +121,8 @@ fn insert_many_into_fresh_db(b: Bencher, n: usize) {
 #[divan::bench(name = "insert_many (existing db)", args = [1, 1000, 10000])]
 fn insert_many_into_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -143,7 +148,8 @@ fn insert_many_into_existing_db(b: Bencher, n: usize) {
 fn update_into_fresh_db(b: Bencher) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -169,7 +175,8 @@ fn update_into_fresh_db(b: Bencher) {
 #[divan::bench(name = "update (existing db)")]
 fn update_into_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -197,7 +204,8 @@ fn update_into_existing_db(b: Bencher) {
 fn update_many_into_fresh_db(b: Bencher, n: usize) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -225,7 +233,8 @@ fn update_many_into_fresh_db(b: Bencher, n: usize) {
 #[divan::bench(name = "update_many (existing db)", args = [1, 1000, 10000])]
 fn update_many_into_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -254,7 +263,8 @@ fn update_many_into_existing_db(b: Bencher, n: usize) {
 #[divan::bench]
 fn get(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -278,7 +288,8 @@ fn get(b: Bencher) {
 #[divan::bench(name = "get (one from large db)", args = [100, 1000])]
 fn get_one_from_large_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -307,7 +318,8 @@ fn get_one_from_large_db(b: Bencher, n: usize) {
 #[divan::bench(args = [1000, 10000, 100000])]
 fn all(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -333,7 +345,8 @@ fn all(b: Bencher, n: usize) {
 fn remove_from_fresh_db(b: Bencher) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -357,7 +370,8 @@ fn remove_from_fresh_db(b: Bencher) {
 #[divan::bench(name = "remove (existing db)")]
 fn remove_from_existing_db(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -383,7 +397,8 @@ fn remove_from_existing_db(b: Bencher) {
 fn remove_many_from_fresh_db(b: Bencher, n: usize) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()
@@ -413,7 +428,8 @@ fn remove_many_from_fresh_db(b: Bencher, n: usize) {
 #[divan::bench(name = "remove_many (existing db)", args = [1, 1000, 10000])]
 fn remove_many_from_existing_db(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -444,7 +460,8 @@ fn remove_many_from_existing_db(b: Bencher, n: usize) {
 #[divan::bench(name = "for_each", args = [1, 1000, 10000])]
 fn for_each(b: Bencher, n: usize) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -473,7 +490,8 @@ fn for_each(b: Bencher, n: usize) {
 fn export_table(b: Bencher, args: (usize, bool)) {
     let (n, pretty) = args;
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -499,7 +517,8 @@ fn export_table(b: Bencher, args: (usize, bool)) {
 #[divan::bench]
 fn is_empty(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -524,7 +543,8 @@ fn is_empty(b: Bencher) {
 #[divan::bench]
 fn create_table(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .key_source(KeySource::PreDerived(KEY))
         .open()
         .unwrap();
@@ -535,7 +555,8 @@ fn create_table(b: Bencher) {
 #[divan::bench]
 fn get_setting(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -552,7 +573,8 @@ fn get_setting(b: Bencher) {
 #[divan::bench]
 fn set_setting(b: Bencher) {
     let temp_file = NamedTempFile::new().unwrap();
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .key_source(KeySource::PreDerived(KEY))
         .open()
@@ -571,7 +593,8 @@ fn set_setting(b: Bencher) {
 fn transaction(b: Bencher) {
     b.with_inputs(|| {
         let temp_file = NamedTempFile::new().unwrap();
-        let db = MiniDB::builder(temp_file.path())
+        let db = MiniDB::builder()
+            .path(temp_file.path())
             .table::<Person>()
             .key_source(KeySource::PreDerived(KEY))
             .open()

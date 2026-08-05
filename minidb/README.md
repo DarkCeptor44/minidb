@@ -48,7 +48,7 @@ struct Person {
    age: u8,
 }
 
-let db = MiniDB::builder("path/to/db")
+let db = MiniDB::builder().path("path/to/db")
       .table::<Person>()
       .open()
       .unwrap();

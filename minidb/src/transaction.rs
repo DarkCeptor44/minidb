@@ -2,24 +2,40 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::fmt::Debug;
-
 use crate::{
     SETTINGS_TABLE,
     encryption::{decrypt_bytes, encrypt_bytes},
     error::{Error, Result},
+    ipc::{IpcClient, IpcRequest, IpcResponse},
     model::Table,
 };
 use chacha20poly1305::XChaCha20Poly1305;
-use redb::WriteTransaction;
 use serde::Serialize;
+use std::fmt::Debug;
+
+pub(crate) enum TransactionBackend<'a> {
+    Local(Box<redb::WriteTransaction>),
+    Ipc(&'a IpcClient),
+}
+
+impl Debug for TransactionBackend<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionBackend::Local(_) => f
+                .debug_tuple("Local")
+                .field(&"<redb::WriteTransaction>")
+                .finish(),
+            TransactionBackend::Ipc(client) => f.debug_tuple("Ipc").field(client).finish(),
+        }
+    }
+}
 
 /// A write transaction.
 ///
 /// This struct allows grouping multiple database operations within a single, atomic transaction.
 /// It is created by calling [`MiniDB::transaction`](crate::MiniDB::transaction).
 pub struct Transaction<'a> {
-    pub(crate) txn: WriteTransaction,
+    pub(crate) backend: TransactionBackend<'a>,
     pub(crate) cipher: Option<&'a XChaCha20Poly1305>,
 }
 
@@ -58,16 +74,31 @@ impl Transaction<'_> {
             item.set_id(id);
         }
 
-        let mut table = self.txn.open_table(T::TABLE)?;
         let bytes = postcard::to_stdvec(item)?;
-
         let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
             encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table.insert(item.get_id(), to_write.as_slice())?;
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(T::TABLE)?;
+                table.insert(item.get_id(), to_write.as_slice())?;
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::Insert {
+                    table: T::TABLE.to_string(),
+                    key: item.get_id().to_string(),
+                    value: to_write,
+                })? {
+                    IpcResponse::Ok => {}
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -94,7 +125,7 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self.txn.open_table(T::TABLE)?;
+        let mut new_items = Vec::new();
         for item in items {
             if item.get_id().trim().is_empty() {
                 let id = cuid2::slug();
@@ -102,15 +133,34 @@ impl Transaction<'_> {
             }
 
             let bytes = postcard::to_stdvec(&item)?;
-
-            let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
+            let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
                 encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table.insert(item.get_id(), to_write.as_slice())?;
+            new_items.push((item.get_id().to_string(), to_write));
         }
+
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(T::TABLE)?;
+                for (id, to_write) in new_items {
+                    table.insert(&*id, to_write.as_slice())?;
+                }
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::InsertMany {
+                    table: T::TABLE.to_string(),
+                    items: new_items,
+                })? {
+                    IpcResponse::Ok => {}
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -141,16 +191,31 @@ impl Transaction<'_> {
             return Err(Error::EmptyID);
         }
 
-        let mut table = self.txn.open_table(T::TABLE)?;
-        let bytes = postcard::to_stdvec(&item)?;
-
-        let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
+        let bytes = postcard::to_stdvec(item)?;
+        let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
             encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table.insert(item.get_id(), to_write.as_slice())?;
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(T::TABLE)?;
+                table.insert(item.get_id(), to_write.as_slice())?;
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::Update {
+                    table: T::TABLE.to_string(),
+                    key: item.get_id().to_string(),
+                    value: to_write,
+                })? {
+                    IpcResponse::Ok => {}
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -177,21 +242,41 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self.txn.open_table(T::TABLE)?;
+        let mut new_items = Vec::new();
         for item in items {
             if item.get_id().trim().is_empty() {
                 return Err(Error::EmptyID);
             }
-            let bytes = postcard::to_stdvec(item)?;
 
-            let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
+            let bytes = postcard::to_stdvec(&item)?;
+            let to_write = if let Some(cipher) = &self.cipher {
                 encrypt_bytes(cipher, &bytes)?
             } else {
                 bytes
             };
 
-            table.insert(item.get_id(), to_write.as_slice())?;
+            new_items.push((item.get_id().to_string(), to_write));
         }
+
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(T::TABLE)?;
+                for (id, to_write) in new_items {
+                    table.insert(&*id, to_write.as_slice())?;
+                }
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::UpdateMany {
+                    table: T::TABLE.to_string(),
+                    items: new_items,
+                })? {
+                    IpcResponse::Ok => {}
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -223,17 +308,30 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut table = self.txn.open_table(T::TABLE)?;
-        let maybe_bytes = table.remove(key)?;
+        let maybe_bytes = match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(T::TABLE)?;
+                table.remove(key)?.map(|v| v.value().to_vec())
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::Remove {
+                    table: T::TABLE.to_string(),
+                    key: key.to_string(),
+                })? {
+                    IpcResponse::Value(bytes) => bytes,
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        };
 
         if let Some(bytes) = maybe_bytes {
-            let item: T = if let Some(cipher) = self.cipher {
-                let decrypted = decrypt_bytes(cipher, bytes.value())?;
+            let item: T = if let Some(cipher) = &self.cipher {
+                let decrypted = decrypt_bytes(cipher, &bytes)?;
                 postcard::from_bytes(&decrypted)?
             } else {
-                postcard::from_bytes(bytes.value())?
+                postcard::from_bytes(&bytes)?
             };
-
             Ok(Some(item))
         } else {
             Ok(None)
@@ -267,23 +365,42 @@ impl Transaction<'_> {
     where
         T: Table,
     {
-        let mut result = Vec::new();
-        let mut table = self.txn.open_table(T::TABLE)?;
-        for key in keys {
-            let maybe_bytes = table.remove(key)?;
-
-            if let Some(bytes) = maybe_bytes {
-                let item: T = if let Some(cipher) = &self.cipher {
-                    let decrypted = decrypt_bytes(cipher, bytes.value())?;
-                    postcard::from_bytes(&decrypted)?
-                } else {
-                    postcard::from_bytes(bytes.value())?
-                };
-
-                result.push(item);
+        let values: Vec<Vec<u8>> = match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut results = Vec::new();
+                let mut table = txn.open_table(T::TABLE)?;
+                for key in keys {
+                    if let Some(bytes) = table.remove(key)? {
+                        results.push(bytes.value().to_vec());
+                    }
+                }
+                results
             }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::RemoveMany {
+                    table: T::TABLE.to_string(),
+                    keys: keys.iter().map(std::string::ToString::to_string).collect(),
+                })? {
+                    IpcResponse::Rows(items) => items.into_iter().map(|(_, v)| v).collect(),
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        };
+
+        let mut decrypted_items = Vec::with_capacity(values.len());
+        for bytes in values {
+            let data: T = if let Some(cipher) = &self.cipher {
+                let decrypted = decrypt_bytes(cipher, &bytes)?;
+                postcard::from_bytes(&decrypted)?
+            } else {
+                postcard::from_bytes(&bytes)?
+            };
+
+            decrypted_items.push(data);
         }
-        Ok(result)
+
+        Ok(decrypted_items)
     }
 
     /// Sets an item in the settings table
@@ -310,16 +427,30 @@ impl Transaction<'_> {
     where
         T: Serialize,
     {
-        let mut table = self.txn.open_table(SETTINGS_TABLE)?;
         let bytes = postcard::to_stdvec(value)?;
-
-        let to_write: Vec<u8> = if let Some(cipher) = self.cipher {
+        let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
             encrypt_bytes(cipher, &bytes)?
         } else {
             bytes
         };
 
-        table.insert(key, to_write.as_slice())?;
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let mut table = txn.open_table(SETTINGS_TABLE)?;
+                table.insert(key, to_write.as_slice())?;
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::SetSetting {
+                    key: key.to_string(),
+                    value: to_write,
+                })? {
+                    IpcResponse::Ok => {}
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+
         Ok(())
     }
 }

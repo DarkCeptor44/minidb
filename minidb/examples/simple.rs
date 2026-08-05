@@ -41,7 +41,8 @@ fn main() {
     let temp_file = NamedTempFile::new().unwrap();
 
     // 1. Create a new database without encryption and only one table (Person)
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
         .open()
         .unwrap();

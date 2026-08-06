@@ -6,6 +6,8 @@ use crate::error::Result;
 use interprocess::local_socket::{
     GenericFilePath, ToFsName, prelude::LocalSocketStream, traits::Stream,
 };
+use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
 
 /// IPC client
 #[derive(Debug)]
@@ -51,12 +53,29 @@ impl IpcClient {
     ///
     /// Returns an error if the request fails
     pub fn send_request(&self, request: &IpcRequest) -> Result<IpcResponse> {
-        todo!() // TODO implement IPC request sending
+        let req_bytes = postcard::to_stdvec(request)?;
+        let len = u32::try_from(req_bytes.len()).unwrap_or(u32::MAX);
+
+        let mut stream_ref = &self.stream;
+        stream_ref.write_all(&len.to_le_bytes())?;
+        stream_ref.write_all(&req_bytes)?;
+        stream_ref.flush()?;
+
+        let mut len_bytes = [0u8; 4];
+        stream_ref.read_exact(&mut len_bytes)?;
+        let resp_len = u32::from_le_bytes(len_bytes) as usize;
+
+        let mut resp_bytes = vec![0u8; resp_len];
+        stream_ref.read_exact(&mut resp_bytes)?;
+
+        let response: IpcResponse = postcard::from_bytes(&resp_bytes)?;
+
+        Ok(response)
     }
 }
 
 /// IPC request
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum IpcRequest {
     /// Inserts a key-value pair into the database
     Insert {
@@ -192,7 +211,7 @@ pub enum IpcRequest {
 }
 
 /// IPC response
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum IpcResponse {
     /// A successful response
     Ok,

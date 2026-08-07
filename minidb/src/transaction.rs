@@ -6,7 +6,7 @@ use crate::{
     SETTINGS_TABLE,
     encryption::{decrypt_bytes, encrypt_bytes},
     error::{Error, Result},
-    ipc::{IpcClient, IpcRequest, IpcResponse},
+    ipc::{IpcRequest, IpcResponse, client::IpcClient},
     model::Table,
 };
 use chacha20poly1305::XChaCha20Poly1305;

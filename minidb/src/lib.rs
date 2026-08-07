@@ -104,7 +104,6 @@ mod transaction;
 pub use crate::{
     builder::{KeySource, MiniDBBuilder},
     error::Error,
-    ipc::{IpcClient, IpcRequest, IpcResponse},
     model::{Table, TableIterator, TableIteratorInner},
     transaction::Transaction,
 };
@@ -116,6 +115,7 @@ pub use serde;
 use crate::{
     encryption::{decrypt_bytes, encrypt_bytes},
     error::Result,
+    ipc::{IpcRequest, IpcResponse, client::IpcClient},
     transaction::TransactionBackend,
 };
 use argon2::password_hash::{SaltString, rand_core::OsRng};
@@ -174,30 +174,38 @@ impl MiniDB {
         MiniDBBuilder::new()
     }
 
-    /// Creates a new [`MiniDB`] from a [`IpcClient`]
+    /// Creates a new [`MiniDB`] from a IPC path
     ///
     /// If you don't need advanced features then I recommend [`MiniDB::builder`] instead, you can pass the tables to it, the path, whether or not to use encryption, and even IPC fallback.
     ///
     /// ## Arguments
     ///
-    /// * `client` - The [`IpcClient`] to use
+    /// * `ipc_path` - The path to the IPC server
     ///
     /// ## Returns
     ///
-    /// A new [`MiniDB`] with the provided [`IpcClient`]
+    /// A new [`MiniDB`] with the IPC backend
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the connection fails
     ///
     /// ## Example
     ///
     /// ```rust,no_run
     /// use minidb::{MiniDB, IpcClient};
     ///
-    /// let db = MiniDB::from_ipc_client(IpcClient::connect(r"\\.\pipe\minidb").unwrap());
+    /// let db = MiniDB::from_ipc(r"\\.\pipe\minidb").unwrap();
     /// ```
-    pub fn from_ipc_client(client: IpcClient) -> Self {
-        Self {
+    pub fn from_ipc<P>(ipc_path: P) -> Result<Self>
+    where
+        P: AsRef<str>,
+    {
+        let client = IpcClient::connect(ipc_path)?;
+        Ok(Self {
             backend: Backend::Ipc(client),
             cipher: None,
-        }
+        })
     }
 
     /// Creates a new [`MiniDB`] from a [`redb::Database`]
@@ -249,7 +257,7 @@ impl MiniDB {
     ///
     /// ## Returns
     ///
-    /// A [`Result`] containing the vector of all items in the table `T`
+    /// A [`Result`](std::result::Result) containing the vector of all items in the table `T`
     ///
     /// ## Errors
     ///
@@ -1291,7 +1299,7 @@ impl MiniDB {
     ///
     /// ## Returns
     ///
-    /// A [`Result`] containing the result of the processing function `f`
+    /// A [`Result`](std::result::Result) containing the result of the processing function `f`
     ///
     /// ## Errors
     ///

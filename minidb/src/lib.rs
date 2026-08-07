@@ -18,8 +18,6 @@
 //! * Type-safe operations (mostly)
 //! * Optional encryption using [XChaCha20Poly1305]
 //! * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
-//! * Re-exports [serde] for convenience
-//! * Re-exports [redb] and some direct/less-opinionated methods for advanced usage
 //! * "Relational" (requires manual management of foreign keys)
 //!
 //! ## MSRV
@@ -30,11 +28,12 @@
 //!
 //! ## Getting Started
 //!
-//! Add `minidb` to your `Cargo.toml`:
+//! Add `minidb` and `serde` to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! minidb = { version = "0.4.0", features = ["macros"] } # Or just "0.4.0" if you don't need the macros
+//! serde = { version = "1.0.229", features = ["derive"] }
 //! ```
 //!
 //! ## Basic Usage Example
@@ -44,13 +43,10 @@
 //! **Note**: This example requires the `macros` feature.
 //!
 //! ```rust,ignore
-//! use minidb::{
-//!     serde::{Deserialize, Serialize},
-//!     MiniDB, Table
-//! };
+//! use minidb::{MiniDB, Table};
+//! use serde::{Deserialize, Serialize};
 //!
 //! #[derive(Table, Serialize, Deserialize, Debug)]
-//! #[serde(crate = "minidb::serde")] // required if using re-exported serde
 //! #[minidb(name = "people")]
 //! struct Person {
 //!     #[key]
@@ -109,8 +105,7 @@ pub use crate::{
 };
 #[cfg(feature = "macros")]
 pub use minidb_macros::Table;
-pub use redb;
-pub use serde;
+pub use redb::{TableDefinition, TypeName};
 
 use crate::{
     encryption::{decrypt_bytes, encrypt_bytes},
@@ -120,7 +115,7 @@ use crate::{
 };
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use chacha20poly1305::XChaCha20Poly1305;
-use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, ReadableTableMetadata};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -193,7 +188,7 @@ impl MiniDB {
     /// ## Example
     ///
     /// ```rust,no_run
-    /// use minidb::{MiniDB, IpcClient};
+    /// use minidb::MiniDB;
     ///
     /// let db = MiniDB::from_ipc(r"\\.\pipe\minidb").unwrap();
     /// ```

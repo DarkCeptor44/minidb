@@ -97,13 +97,10 @@ impl MiniDBBuilder {
     /// ## Example
     ///
     /// ```rust,ignore
-    /// use minidb::{
-    ///     MiniDB, Table,
-    ///     serde::{Deserialize, Serialize},
-    /// };
+    /// use minidb::{MiniDB, Table};
+    /// use serde::{Deserialize, Serialize};
     ///
     /// #[derive(Table, Serialize, Deserialize)]
-    /// #[serde(crate = "minidb::serde")]
     /// struct Person{
     ///     #[key]
     ///     id: String,
@@ -190,13 +187,13 @@ impl MiniDBBuilder {
     /// // create a MiniDB builder with a password
     /// let db = MiniDB::builder().path("test.redb")
     ///     // skipping table registering for convenience
-    ///     .key_source(Some(KeySource::Password("secretpassword".to_string())));
+    ///     .set_key_source(Some(KeySource::Password("secretpassword".to_string())));
     ///
     /// // create a MiniDB builder with a pre-derived key
     /// let key = [1u8; 32];
     /// let db = MiniDB::builder().path("test.redb")
     ///     // skipping table registering for convenience
-    ///     .key_source(Some(KeySource::PreDerived(key)));
+    ///     .set_key_source(Some(KeySource::PreDerived(key)));
     ///
     /// // create a MiniDB builder with a function that returns a key
     /// fn key_provider() -> [u8; 32] {
@@ -205,7 +202,7 @@ impl MiniDBBuilder {
     ///
     /// let db = MiniDB::builder().path("test.redb")
     ///     // skipping table registering for convenience
-    ///     .key_source(Some(KeySource::ExternalKeyProvider(Box::new(key_provider))));
+    ///     .set_key_source(Some(KeySource::ExternalKeyProvider(Box::new(key_provider))));
     /// ```
     #[must_use]
     pub fn set_key_source(mut self, source: Option<KeySource>) -> Self {

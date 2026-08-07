@@ -2,13 +2,12 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::collections::HashSet;
-
 use anyhow::{Result, anyhow};
 use minidb::{MiniDB, Table};
 use rand::seq::IndexedRandom;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tempfile::NamedTempFile;
 
 struct CliDb {

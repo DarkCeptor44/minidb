@@ -12,8 +12,6 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 * Type-safe operations (mostly)
 * Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
 * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
-* Re-exports [serde](https://crates.io/crates/serde) for convenience
-* Re-exports [redb](https://crates.io/crates/redb) and some direct/less-opinionated methods for advanced usage
 * "Relational" (requires manual management of foreign keys)
 
 ## MSRV
@@ -29,6 +27,7 @@ In your `Cargo.toml`:
 ```toml
 [dependencies]
 minidb = { version = "0.4.0", features = ["macros"] } # or whatever the latest version is
+serde = { version = "1.0.229", features = ["derive"] }
 ```
 
 ## Usage
@@ -40,7 +39,6 @@ Full examples can be found in the [examples](./examples) directory.
 ```rust
 #[derive(Table, Serialize, Deserialize)]
 #[minidb(name = "people")]
-#[serde(crate = "minidb::serde")] // required if using re-exported serde
 struct Person {
    #[key]
    id: String,

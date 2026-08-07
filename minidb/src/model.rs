@@ -15,14 +15,11 @@ use std::{fmt::Debug, marker::PhantomData};
 ///
 /// ## Example
 ///
-/// ```rust,no_run
-/// use minidb::{
-///     serde::{Deserialize, Serialize},
-///     Table,
-/// };
+/// ```rust
+/// use minidb::{Table, TableDefinition};
+/// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Serialize, Deserialize)]
-/// #[serde(crate = "minidb::serde")] // required if using re-exported serde
 /// struct Person {
 ///     id: String,
 ///     name: String,
@@ -30,7 +27,7 @@ use std::{fmt::Debug, marker::PhantomData};
 /// }
 ///
 /// impl Table for Person {
-///     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> = redb::TableDefinition::new("people");
+///     const TABLE: TableDefinition<'_, &'static str, &[u8]> = TableDefinition::new("people");
 ///
 ///     fn get_id(&self) -> &str {
 ///         &self.id

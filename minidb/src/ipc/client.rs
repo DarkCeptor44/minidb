@@ -10,7 +10,7 @@ use std::io::{Read, Write};
 
 /// IPC client
 #[derive(Debug)]
-pub struct IpcClient {
+pub(crate) struct IpcClient {
     stream: LocalSocketStream,
 }
 

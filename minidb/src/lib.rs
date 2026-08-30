@@ -92,7 +92,7 @@
 mod builder;
 mod encryption;
 mod error;
-mod ipc;
+pub mod ipc;
 mod model;
 mod testing;
 mod transaction;
@@ -110,7 +110,7 @@ pub use redb::{TableDefinition, TypeName};
 use crate::{
     encryption::{decrypt_bytes, encrypt_bytes},
     error::Result,
-    ipc::{IpcRequest, IpcResponse, client::IpcClient},
+    ipc::{IpcClient, IpcRequest, IpcResponse},
     transaction::TransactionBackend,
 };
 use argon2::password_hash::{SaltString, rand_core::OsRng};

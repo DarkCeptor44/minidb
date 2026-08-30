@@ -2,12 +2,20 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-pub mod client;
+//! # IPC
+//!
+//! This module provides an IPC implementation for MiniDB.
+
+mod client;
+mod server;
+
+pub(crate) use client::IpcClient;
+pub use server::IpcServer;
 
 use serde::{Deserialize, Serialize};
 
 /// IPC request
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum IpcRequest {
     /// Inserts a key-value pair into the database
     Insert {
@@ -143,7 +151,7 @@ pub(crate) enum IpcRequest {
 }
 
 /// IPC response
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum IpcResponse {
     /// A successful response
     Ok,

@@ -4,7 +4,7 @@
 
 use crate::{
     ArgonKey, Backend, Error, META_TABLE, MiniDB, SETTINGS_TABLE,
-    encryption::derive_key_from_password, error::Result, ipc::client::IpcClient, model::Table,
+    encryption::derive_key_from_password, error::Result, ipc::IpcClient, model::Table,
 };
 use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
 use redb::{Database, WriteTransaction};

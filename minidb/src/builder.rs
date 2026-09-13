@@ -100,10 +100,22 @@ impl MiniDBBuilder {
     /// use minidb::{MiniDB, Table};
     /// use serde::{Deserialize, Serialize};
     ///
-    /// #[derive(Table, Serialize, Deserialize)]
+    /// #[derive(Serialize, Deserialize)]
     /// struct Person{
     ///     #[key]
     ///     id: String,
+    /// }
+    ///
+    /// impl Table for Person {
+    ///     const TABLE: minidb::TableDefinition<'_, &'static str, &[u8]> = minidb::TableDefinition::new("people");
+    ///
+    ///     fn get_id(&self) -> &str {
+    ///         &self.id
+    ///     }
+    ///
+    ///     fn set_id(&mut self, id: String) {
+    ///         self.id = id;
+    ///     }
     /// }
     ///
     /// // create a MiniDB builder with the file path

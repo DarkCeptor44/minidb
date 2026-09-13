@@ -8,8 +8,8 @@ use interprocess::local_socket::{
 };
 use postcard::{from_bytes, to_stdvec};
 use redb::{
-    Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition, TableHandle,
-    WriteTransaction,
+    Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition, TableError,
+    TableHandle, WriteTransaction,
 };
 use std::io::{Error as IoError, Read, Result as IoResult, Write};
 
@@ -32,20 +32,23 @@ macro_rules! run_write_op {
 }
 
 macro_rules! run_read_op {
-    ($local_db:expr, $active_txn:expr, $table:expr, |$t:ident| $body:expr) => {
-        if let Some(txn) = $active_txn.as_ref() {
-            let $t = txn.open_table(get_table(&$table))?;
-            let val = $body;
-            Ok(val)
+    ($local_db:expr, $active_txn:expr, $table:expr, |$t:ident| $body:expr) => {{
+        let __res: crate::error::Result<_> = if let Some(txn) = $active_txn.as_ref() {
+            match txn.open_table(get_table(&$table)) {
+                Ok($t) => Ok(Some($body)),
+                Err(TableError::TableDoesNotExist(_)) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
         } else {
             let txn = $local_db.begin_read()?;
-            let val = {
-                let $t = txn.open_table(get_table(&$table))?;
-                $body
-            };
-            Ok(val)
-        }
-    };
+            match txn.open_table(get_table(&$table)) {
+                Ok($t) => Ok(Some($body)),
+                Err(TableError::TableDoesNotExist(_)) => Ok(None),
+                Err(e) => Err(e.into()),
+            }
+        };
+        __res
+    }};
 }
 
 /// IPC server helper
@@ -55,14 +58,33 @@ macro_rules! run_read_op {
 /// ## Examples
 ///
 /// ```rust,no_run
+/// use minidb::{MiniDB, Table};
+/// use minidb::ipc::IpcServer;
+/// use serde::{Serialize, Deserialize};
+/// use std::time::Duration;
+///
 /// const IPC_PATH: &str = r"\\.\pipe\my_ipc_server";
 ///
+/// #[derive(Serialize, Deserialize)]
 /// struct Person {
+///     id: String,
 ///     name: String,
 ///     age: u8,
 /// }
 ///
-/// let db1 = MiniDB::builder()
+/// impl Table for Person {
+///     const TABLE: minidb::TableDefinition<'_, &'static str, &[u8]> = minidb::TableDefinition::new("people");
+///
+///     fn get_id(&self) -> &str {
+///         &self.id
+///     }
+///
+///     fn set_id(&mut self, id: String) {
+///         self.id = id;
+///     }
+/// }
+///
+/// let mut db1 = MiniDB::builder()
 ///     .path("path/to/db")
 ///     .table::<Person>()
 ///     .open()
@@ -85,14 +107,33 @@ macro_rules! run_read_op {
 /// Alternatively, you can keep a single database instance and any outside process running the same code will automatically use IPC as fallback:
 ///
 /// ```rust,no_run
+/// use minidb::{MiniDB, Table};
+/// use minidb::ipc::IpcServer;
+/// use serde::{Serialize, Deserialize};
+/// use std::time::Duration;
+///
 /// const IPC_PATH: &str = r"\\.\pipe\my_ipc_server";
 ///
+/// #[derive(Serialize, Deserialize)]
 /// struct Person {
+///     id: String,
 ///     name: String,
 ///     age: u8,
 /// }
 ///
-/// let db = MiniDB::builder()
+/// impl Table for Person {
+///     const TABLE: minidb::TableDefinition<'_, &'static str, &[u8]> = minidb::TableDefinition::new("people");
+///
+///     fn get_id(&self) -> &str {
+///         &self.id
+///     }
+///
+///     fn set_id(&mut self, id: String) {
+///         self.id = id;
+///     }
+/// }
+///
+/// let mut db = MiniDB::builder()
 ///     .path("path/to/db")
 ///     .table::<Person>()
 ///     .ipc_path(IPC_PATH)
@@ -100,7 +141,7 @@ macro_rules! run_read_op {
 ///     .unwrap();
 ///
 /// std::thread::spawn(move || {
-///         IpcServer::listen(&mut db1, IPC_PATH).expect("failed to listen to IPC server");
+///         IpcServer::listen(&mut db, IPC_PATH).expect("failed to listen to IPC server");
 ///     });
 /// std::thread::sleep(Duration::from_millis(50));
 ///
@@ -262,38 +303,45 @@ impl IpcServer {
     ) -> Result<IpcResponse> {
         match request {
             IpcRequest::Get { table, key } => {
-                run_read_op!(local_db, active_txn, table, |t| {
-                    let val = t.get(&*key)?.map(|v| v.value().to_vec());
-                    IpcResponse::Value(val)
-                })
+                let res = run_read_op!(local_db, active_txn, table, |t| {
+                    t.get(&*key)?.map(|v| v.value().to_vec())
+                })?;
+                Ok(IpcResponse::Value(res.flatten()))
             }
             IpcRequest::GetAll { table } => {
-                run_read_op!(local_db, active_txn, table, |t| {
+                let res = run_read_op!(local_db, active_txn, table, |t| {
                     let mut rows = Vec::new();
                     for item in t.iter()? {
                         let (k, v) = item?;
                         rows.push((k.value().to_string(), v.value().to_vec()));
                     }
-                    IpcResponse::Rows(rows)
-                })
+                    rows
+                })?;
+
+                match res {
+                    Some(rows) => Ok(IpcResponse::Rows(rows)),
+                    None => Ok(IpcResponse::Rows(Vec::new())),
+                }
             }
             IpcRequest::GetMeta { key } => {
-                run_read_op!(local_db, active_txn, META_TABLE.name(), |t| {
-                    let val = t.get(&*key)?.map(|v| v.value().to_vec());
-                    IpcResponse::Value(val)
-                })
+                let res = run_read_op!(local_db, active_txn, META_TABLE.name(), |t| {
+                    t.get(&*key)?.map(|v| v.value().to_vec())
+                })?;
+                Ok(IpcResponse::Value(res.flatten()))
             }
             IpcRequest::GetSetting { key } => {
-                run_read_op!(local_db, active_txn, SETTINGS_TABLE.name(), |t| {
-                    let val = t.get(&*key)?.map(|v| v.value().to_vec());
-                    IpcResponse::Value(val)
-                })
+                let res = run_read_op!(local_db, active_txn, SETTINGS_TABLE.name(), |t| {
+                    t.get(&*key)?.map(|v| v.value().to_vec())
+                })?;
+                Ok(IpcResponse::Value(res.flatten()))
             }
             IpcRequest::IsEmpty { table } => {
-                run_read_op!(local_db, active_txn, table, |t| {
-                    let is_empty = t.len()? == 0;
-                    IpcResponse::Bool(is_empty)
-                })
+                let res = run_read_op!(local_db, active_txn, table, |t| t.len()? == 0)?;
+
+                match res {
+                    Some(is_empty) => Ok(IpcResponse::Bool(is_empty)),
+                    None => Ok(IpcResponse::Bool(true)),
+                }
             }
             _ => unreachable!(),
         }

@@ -2,7 +2,9 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use crate::{Backend, IpcRequest, IpcResponse, META_TABLE, MiniDB, SETTINGS_TABLE, error::Result};
+use crate::{
+    Backend, Error, IpcRequest, IpcResponse, META_TABLE, MiniDB, SETTINGS_TABLE, error::Result,
+};
 use interprocess::local_socket::{
     GenericFilePath, ListenerOptions, ToFsName, prelude::LocalSocketStream, traits::ListenerExt,
 };
@@ -53,7 +55,7 @@ macro_rules! run_read_op {
 
 /// IPC server helper
 ///
-/// This takes a mutable reference to the database and a path to listen on, making sure the first process has the exclusive lock on the database file. Then the second process can connect directly to the database using the IPC path. Check the example below
+/// This takes a reference to the database and a path to listen on, making sure the first process has the exclusive lock on the database file. Then other processes can connect directly to the database using the IPC path. Check the example below
 ///
 /// ## Examples
 ///
@@ -164,28 +166,36 @@ impl IpcServer {
     /// ## Errors
     ///
     /// Returns an error if the connection fails
-    pub fn listen<S>(db: &mut MiniDB, ipc_path: S) -> Result<()>
+    pub fn listen<S>(db: &MiniDB, ipc_path: S) -> Result<()>
     where
         S: AsRef<str>,
     {
         let name = ipc_path.as_ref().to_fs_name::<GenericFilePath>()?;
         let listener = ListenerOptions::new().name(name).create_sync()?;
 
-        for stream in listener.incoming() {
-            let Ok(mut stream) = stream else { continue };
-            Self::handle_connection(db, &mut stream);
-        }
+        let local_db = match &db.backend {
+            Backend::Local(db) => db,
+            Backend::Ipc(_) => {
+                return Err(Error::Ipc(
+                    "Cannot run IPC server on an IPC client database".to_string(),
+                ));
+            }
+        };
+
+        std::thread::scope(|s| {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                s.spawn(move || {
+                    Self::handle_connection(local_db, &mut stream);
+                });
+            }
+        });
 
         Ok(())
     }
 
-    fn handle_connection(db: &mut MiniDB, stream: &mut LocalSocketStream) {
+    fn handle_connection(local_db: &Database, stream: &mut LocalSocketStream) {
         let mut active_txn: Option<WriteTransaction> = None;
-
-        let local_db = match &mut db.backend {
-            Backend::Local(db) => db,
-            Backend::Ipc(_) => return,
-        };
 
         loop {
             let mut len_bytes = [0u8; 4];
@@ -216,7 +226,7 @@ impl IpcServer {
     }
 
     fn handle_request(
-        local_db: &mut Database,
+        local_db: &Database,
         active_txn: &mut Option<WriteTransaction>,
         request: IpcRequest,
     ) -> IpcResponse {
@@ -227,7 +237,7 @@ impl IpcServer {
                 Ok(Self::handle_txn_op(local_db, active_txn, &request))
             }
             IpcRequest::CheckIntegrity | IpcRequest::Compact => {
-                Ok(Self::handle_db_op(local_db, &request))
+                Ok(Self::handle_db_op(local_db, active_txn.as_ref(), &request))
             }
             IpcRequest::Get { .. }
             | IpcRequest::GetAll { .. }
@@ -243,7 +253,7 @@ impl IpcServer {
     }
 
     fn handle_txn_op(
-        local_db: &mut Database,
+        local_db: &Database,
         active_txn: &mut Option<WriteTransaction>,
         request: &IpcRequest,
     ) -> IpcResponse {
@@ -282,22 +292,31 @@ impl IpcServer {
         }
     }
 
-    fn handle_db_op(local_db: &mut Database, request: &IpcRequest) -> IpcResponse {
+    fn handle_db_op(
+        _local_db: &Database,
+        active_txn: Option<&WriteTransaction>,
+        request: &IpcRequest,
+    ) -> IpcResponse {
+        if active_txn.is_some() {
+            return IpcResponse::Error(
+                "Cannot perform database maintenance while a transaction is in progress"
+                    .to_string(),
+            );
+        }
+
         match request {
-            IpcRequest::CheckIntegrity => match local_db.check_integrity() {
-                Ok(val) => IpcResponse::Bool(val),
-                Err(e) => IpcResponse::Error(e.to_string()),
-            },
-            IpcRequest::Compact => match local_db.compact() {
-                Ok(val) => IpcResponse::Bool(val),
-                Err(e) => IpcResponse::Error(e.to_string()),
-            },
+            IpcRequest::CheckIntegrity => IpcResponse::Error(
+                "Checking integrity is not supported over multi-client IPC".to_string(),
+            ),
+            IpcRequest::Compact => IpcResponse::Error(
+                "Compacting database is not supported over multi-client IPC".to_string(),
+            ),
             _ => unreachable!(),
         }
     }
 
     fn handle_read_op(
-        local_db: &mut Database,
+        local_db: &Database,
         active_txn: &mut Option<WriteTransaction>,
         request: IpcRequest,
     ) -> Result<IpcResponse> {
@@ -348,7 +367,7 @@ impl IpcServer {
     }
 
     fn handle_write_op(
-        local_db: &mut Database,
+        local_db: &Database,
         active_txn: &mut Option<WriteTransaction>,
         request: IpcRequest,
     ) -> Result<IpcResponse> {
@@ -397,15 +416,14 @@ impl IpcServer {
                 })
             }
             IpcRequest::CreateTable { table } => {
-                let res = || -> Result<()> {
+                if let Some(txn) = active_txn.as_ref() {
+                    let _ = txn.open_table(get_table(&table))?;
+                    Ok(IpcResponse::Ok)
+                } else {
                     let txn = local_db.begin_write()?;
                     let _ = txn.open_table(get_table(&table))?;
                     txn.commit()?;
-                    Ok(())
-                }();
-                match res {
-                    Ok(()) => Ok(IpcResponse::Ok),
-                    Err(e) => Ok(IpcResponse::Error(e.to_string())),
+                    Ok(IpcResponse::Ok)
                 }
             }
             _ => unreachable!(),

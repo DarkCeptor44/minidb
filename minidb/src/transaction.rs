@@ -10,7 +10,9 @@ use crate::{
     model::Table,
 };
 use chacha20poly1305::XChaCha20Poly1305;
-use serde::Serialize;
+use postcard::from_bytes;
+use redb::{ReadableTable, ReadableTableMetadata};
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 pub(crate) enum TransactionBackend<'a> {
@@ -452,5 +454,188 @@ impl Transaction<'_> {
         }
 
         Ok(())
+    }
+
+    /// Retrieves all items from a table within the transaction
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    ///
+    /// ## Returns
+    ///
+    /// A [`Result`](std::result::Result) containing the vector of all items in the table `T`
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if decryption/deserialization fails
+    pub fn all<T>(&self) -> Result<Vec<T>>
+    where
+        T: Table,
+    {
+        let values: Vec<Vec<u8>> = match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let table = txn.open_table(T::TABLE)?;
+
+                let mut results = Vec::new();
+                for item in table.iter()? {
+                    let (_key, value) = item?;
+                    results.push(value.value().to_vec());
+                }
+
+                results
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::GetAll {
+                    table: T::TABLE.to_string(),
+                })? {
+                    IpcResponse::Rows(items) => items.into_iter().map(|(_, v)| v).collect(),
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        };
+
+        let mut results = Vec::with_capacity(values.len());
+        for bytes in values {
+            let data: T = if let Some(cipher) = &self.cipher {
+                let decrypted = decrypt_bytes(cipher, &bytes)?;
+                from_bytes(&decrypted)?
+            } else {
+                from_bytes(&bytes)?
+            };
+
+            results.push(data);
+        }
+
+        Ok(results)
+    }
+
+    /// Checks if a table is empty within the transaction
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    ///
+    /// ## Returns
+    ///
+    /// * `Ok(true)` if the table is empty
+    /// * `Ok(false)` if the table is not empty
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found or couldn't be opened
+    pub fn is_empty<T>(&self) -> Result<bool>
+    where
+        T: Table,
+    {
+        match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let table = txn.open_table(T::TABLE)?;
+                Ok(table.is_empty()?)
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::IsEmpty {
+                    table: T::TABLE.to_string(),
+                })? {
+                    IpcResponse::Bool(is_empty) => Ok(is_empty),
+                    IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                    _ => Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        }
+    }
+
+    /// Retrieves an item from a table within the transaction
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `id` - The id of the item to retrieve
+    ///
+    /// ## Returns
+    ///
+    /// * `Ok(Some(item))` if the item was found
+    /// * `Ok(None)` if the item was not found
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if decryption/deserialization fails
+    pub fn get<T>(&self, id: &str) -> Result<Option<T>>
+    where
+        T: Table,
+    {
+        let maybe_bytes = match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let table = txn.open_table(T::TABLE)?;
+                table.get(id)?.map(|v| v.value().to_vec())
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::Get {
+                    table: T::TABLE.to_string(),
+                    key: id.to_string(),
+                })? {
+                    IpcResponse::Value(bytes) => bytes,
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        };
+
+        if let Some(bytes) = maybe_bytes {
+            let item: T = if let Some(cipher) = &self.cipher {
+                let decrypted = decrypt_bytes(cipher, &bytes)?;
+                from_bytes(&decrypted)?
+            } else {
+                from_bytes(&bytes)?
+            };
+
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Retrieves an item from the settings table within the transaction
+    ///
+    /// ## Arguments
+    ///
+    /// * `T` - The table model
+    /// * `key` - The key of the item to retrieve
+    ///
+    /// ## Returns
+    ///
+    /// * `Ok(Some(item))` if the item was found
+    /// * `Ok(None)` if the item was not found
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if the table is not found, if the table is not initialized, or if decryption/deserialization fails
+    pub fn get_setting<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: for<'de> Deserialize<'de>,
+    {
+        let maybe_bytes = match &self.backend {
+            TransactionBackend::Local(txn) => {
+                let table = txn.open_table(SETTINGS_TABLE)?;
+                table.get(key)?.map(|v| v.value().to_vec())
+            }
+            TransactionBackend::Ipc(client) => {
+                match client.send_request(&IpcRequest::GetSetting {
+                    key: key.to_string(),
+                })? {
+                    IpcResponse::Value(bytes) => bytes,
+                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                    _ => return Err(Error::UnexpectedIpcResponse),
+                }
+            }
+        };
+
+        if let Some(bytes) = maybe_bytes {
+            let item: T = from_bytes(&bytes)?;
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
     }
 }

@@ -6,12 +6,13 @@ use crate::{IpcRequest, IpcResponse, error::Result};
 use interprocess::local_socket::{
     GenericFilePath, ToFsName, prelude::LocalSocketStream, traits::Stream,
 };
+use parking_lot::Mutex;
 use std::io::{Read, Write};
 
 /// IPC client
 #[derive(Debug)]
 pub(crate) struct IpcClient {
-    stream: LocalSocketStream,
+    stream: Mutex<LocalSocketStream>,
 }
 
 impl IpcClient {
@@ -35,7 +36,9 @@ impl IpcClient {
         let name = ipc_path.as_ref().to_fs_name::<GenericFilePath>()?;
         let stream = LocalSocketStream::connect(name)?;
 
-        Ok(Self { stream })
+        Ok(Self {
+            stream: Mutex::new(stream),
+        })
     }
 
     /// Sends a request to the IPC server
@@ -55,17 +58,17 @@ impl IpcClient {
         let req_bytes = postcard::to_stdvec(request)?;
         let len = u32::try_from(req_bytes.len()).unwrap_or(u32::MAX);
 
-        let mut stream_ref = &self.stream;
-        stream_ref.write_all(&len.to_le_bytes())?;
-        stream_ref.write_all(&req_bytes)?;
-        stream_ref.flush()?;
+        let mut stream = self.stream.lock();
+        stream.write_all(&len.to_le_bytes())?;
+        stream.write_all(&req_bytes)?;
+        stream.flush()?;
 
         let mut len_bytes = [0u8; 4];
-        stream_ref.read_exact(&mut len_bytes)?;
+        stream.read_exact(&mut len_bytes)?;
         let resp_len = u32::from_le_bytes(len_bytes) as usize;
 
         let mut resp_bytes = vec![0u8; resp_len];
-        stream_ref.read_exact(&mut resp_bytes)?;
+        stream.read_exact(&mut resp_bytes)?;
 
         let response: IpcResponse = postcard::from_bytes(&resp_bytes)?;
 

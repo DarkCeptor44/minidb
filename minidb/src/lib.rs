@@ -1119,27 +1119,42 @@ impl MiniDB {
                 Ok(result)
             }
             Backend::Ipc(client) => {
+                struct TransactionGuard<'a> {
+                    client: &'a IpcClient,
+                    commit_on_drop: bool,
+                }
+
+                impl Drop for TransactionGuard<'_> {
+                    fn drop(&mut self) {
+                        if !self.commit_on_drop {
+                            let _ = self.client.send_request(&IpcRequest::RollbackTransaction);
+                        }
+                    }
+                }
+
                 match client.send_request(&IpcRequest::BeginTransaction)? {
                     IpcResponse::Ok => {}
                     IpcResponse::Error(e) => return Err(Error::Ipc(e)),
                     _ => return Err(Error::UnexpectedIpcResponse),
                 }
 
+                let mut guard = TransactionGuard {
+                    client,
+                    commit_on_drop: false,
+                };
+
                 let transaction = Transaction {
                     backend: TransactionBackend::Ipc(client),
                     cipher: self.cipher.as_ref(),
                 };
 
-                match f(&transaction) {
-                    Ok(result) => match client.send_request(&IpcRequest::CommitTransaction)? {
-                        IpcResponse::Ok => Ok(result),
-                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
-                        _ => Err(Error::UnexpectedIpcResponse),
-                    },
-                    Err(e) => {
-                        let _ = client.send_request(&IpcRequest::RollbackTransaction);
-                        Err(e)
-                    }
+                let result = f(&transaction)?;
+                guard.commit_on_drop = true;
+
+                match client.send_request(&IpcRequest::CommitTransaction)? {
+                    IpcResponse::Ok => Ok(result),
+                    IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                    _ => Err(Error::UnexpectedIpcResponse),
                 }
             }
         }

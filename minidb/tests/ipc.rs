@@ -86,7 +86,7 @@ impl CliDb {
 fn test_minidb_with_ipc_insert() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_insert");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -95,7 +95,7 @@ fn test_minidb_with_ipc_insert() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -130,7 +130,7 @@ fn test_minidb_with_ipc_insert_many() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_insert_many");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -139,7 +139,7 @@ fn test_minidb_with_ipc_insert_many() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -172,7 +172,7 @@ fn test_minidb_with_ipc_insert_many() {
 fn test_minidb_with_ipc_update() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_update");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -181,7 +181,7 @@ fn test_minidb_with_ipc_update() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -224,7 +224,7 @@ fn test_minidb_with_ipc_update_many() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_update_many");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -233,7 +233,7 @@ fn test_minidb_with_ipc_update_many() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -282,7 +282,7 @@ fn test_minidb_with_ipc_get() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_get");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -291,7 +291,7 @@ fn test_minidb_with_ipc_get() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -327,7 +327,7 @@ fn test_minidb_with_ipc_get_non_existent() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_get_non_existent");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -336,7 +336,7 @@ fn test_minidb_with_ipc_get_non_existent() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -365,7 +365,7 @@ fn test_minidb_with_ipc_all() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_all");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -374,7 +374,7 @@ fn test_minidb_with_ipc_all() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -402,7 +402,7 @@ fn test_minidb_with_ipc_all() {
 fn test_minidb_with_ipc_all_from_empty_table() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_all_from_empty_table");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -411,7 +411,7 @@ fn test_minidb_with_ipc_all_from_empty_table() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -434,7 +434,7 @@ fn test_minidb_with_ipc_remove() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_remove");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -443,7 +443,7 @@ fn test_minidb_with_ipc_remove() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -483,7 +483,7 @@ fn test_minidb_with_ipc_remove_many() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_remove_many");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -492,7 +492,7 @@ fn test_minidb_with_ipc_remove_many() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -528,7 +528,7 @@ fn test_minidb_with_ipc_for_each() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_for_each");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -537,7 +537,7 @@ fn test_minidb_with_ipc_for_each() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -565,7 +565,7 @@ fn test_minidb_with_ipc_for_each() {
 fn test_minidb_with_ipc_settings() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_settings");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -574,7 +574,7 @@ fn test_minidb_with_ipc_settings() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -610,7 +610,7 @@ fn test_minidb_with_ipc_export_table() {
 
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_export_table");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -619,7 +619,7 @@ fn test_minidb_with_ipc_export_table() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -651,7 +651,7 @@ fn test_minidb_with_ipc_export_table() {
 fn test_minidb_with_ipc_place_order() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_place_order");
     let temp_file = NamedTempFile::new().unwrap();
-    let mut db1 = CliDb {
+    let db1 = CliDb {
         storage: MiniDB::builder()
             .path(temp_file.path())
             .table::<Restaurant>()
@@ -662,7 +662,7 @@ fn test_minidb_with_ipc_place_order() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -704,7 +704,7 @@ fn test_minidb_with_ipc_place_order() {
 fn test_minidb_with_ipc_is_empty() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_is_empty");
     let temp_file = NamedTempFile::new().unwrap();
-    let mut db1 = CliDb {
+    let db1 = CliDb {
         storage: MiniDB::builder()
             .path(temp_file.path())
             .table::<Restaurant>()
@@ -714,7 +714,7 @@ fn test_minidb_with_ipc_is_empty() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -733,7 +733,7 @@ fn test_minidb_with_ipc_is_empty() {
 fn test_minidb_with_ipc_transaction() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_transaction");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .table::<Order>()
@@ -742,7 +742,7 @@ fn test_minidb_with_ipc_transaction() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 
@@ -776,7 +776,7 @@ fn test_minidb_with_ipc_transaction() {
 fn test_minidb_with_ipc_view_all() {
     let ipc_path = unique_ipc_path("test_minidb_with_ipc_view_all");
     let temp_file = NamedTempFile::new().expect("failed to create temp file");
-    let mut db1 = MiniDB::builder()
+    let db1 = MiniDB::builder()
         .path(temp_file.path())
         .table::<Restaurant>()
         .open()
@@ -784,7 +784,7 @@ fn test_minidb_with_ipc_view_all() {
 
     let ipc_path_clone = ipc_path.clone();
     spawn(move || {
-        IpcServer::listen(&mut db1, ipc_path_clone).expect("failed to listen to IPC server");
+        IpcServer::listen(&db1, ipc_path_clone).expect("failed to listen to IPC server");
     });
     sleep(Duration::from_millis(50));
 

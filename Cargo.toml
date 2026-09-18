@@ -8,7 +8,6 @@ authors = ["DarkCeptor44"]
 edition = "2024"
 rust-version = "1.89"
 license = "MPL-2.0"
-homepage = "https://github.com/DarkCeptor44/minidb"
 repository = "https://github.com/DarkCeptor44/minidb"
 
 [workspace.dependencies]

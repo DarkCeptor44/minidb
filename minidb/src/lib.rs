@@ -1331,7 +1331,8 @@ impl MiniDB {
             Backend::Local(db) => {
                 let txn = db.begin_read()?;
                 let table = txn.open_table(T::TABLE)?;
-                let mut iter = TableIterator::new(TableIteratorInner::Local(table.iter()?));
+                let mut iter =
+                    TableIterator::new(TableIteratorInner::Local(Box::new(table.iter()?)));
 
                 if let Some(cipher) = &self.cipher {
                     iter = iter.with_cipher(cipher);

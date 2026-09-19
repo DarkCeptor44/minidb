@@ -52,7 +52,7 @@ pub trait Table: Serialize + for<'de> Deserialize<'de> {
 /// The inner iterator for a table
 pub enum TableIteratorInner<'a> {
     /// The iterator for a local table
-    Local(redb::Range<'a, &'static str, &'static [u8]>),
+    Local(Box<redb::Range<'a, &'static str, &'static [u8]>>),
 
     /// The iterator for an IPC table
     Ipc(std::vec::IntoIter<std::result::Result<(String, Vec<u8>), redb::StorageError>>),

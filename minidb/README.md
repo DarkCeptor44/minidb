@@ -1,5 +1,7 @@
 # MiniDB
 
+[![crates.io](https://img.shields.io/crates/v/minidb.svg)](https://crates.io/crates/minidb) [![docs](https://docs.rs/minidb/badge.svg)](https://docs.rs/minidb) [![MSRV](https://img.shields.io/crates/msrv/minidb)](https://crates.io/crates/minidb) [![license](https://img.shields.io/crates/l/minidb.svg)](./LICENSE) [![downloads](https://img.shields.io/crates/d/minidb)](https://crates.io/crates/minidb)
+
 [API Documentation](https://docs.rs/minidb) | [Workspace](../README.md)
 
 The main MiniDB crate providing a structured wrapper for [redb](https://crates.io/crates/redb) with serialization/deserialization.

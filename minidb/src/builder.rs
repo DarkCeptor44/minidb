@@ -7,7 +7,7 @@ use crate::{
     encryption::derive_key_from_password, error::Result, ipc::IpcClient, model::Table,
 };
 use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
-use redb::{Database, WriteTransaction};
+use redb::{Database, TableDefinition, WriteTransaction};
 use std::{fmt::Debug, path::PathBuf};
 
 type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
@@ -124,15 +124,19 @@ impl MiniDBBuilder {
     ///     .table::<Person>();
     /// ```
     #[must_use]
-    pub fn table<T>(mut self) -> Self
+    pub fn table<T>(self) -> Self
     where
         T: Table + 'static,
     {
-        self.initializers.push(Box::new(|txn| {
-            txn.open_table(T::TABLE)
+        self.register_table_impl(T::TABLE)
+    }
+
+    fn register_table_impl(mut self, table: TableDefinition<'static, &'static str, &[u8]>) -> Self {
+        self.initializers.push(Box::new(move |txn| {
+            txn.open_table(table)
                 .map(|_| ())
                 .map_err(|e| Error::TableInitialization {
-                    name: T::TABLE.to_string(),
+                    name: table.to_string(),
                     source: e,
                 })?;
             Ok(())

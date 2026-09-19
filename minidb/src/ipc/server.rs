@@ -65,7 +65,7 @@ macro_rules! run_read_op {
 /// use serde::{Serialize, Deserialize};
 /// use std::time::Duration;
 ///
-/// const IPC_PATH: &str = r"\\.\pipe\my_ipc_server";
+/// const IPC_PATH: &str = "/tmp/minidb_example.sock";
 ///
 /// #[derive(Serialize, Deserialize)]
 /// struct Person {
@@ -114,7 +114,7 @@ macro_rules! run_read_op {
 /// use serde::{Serialize, Deserialize};
 /// use std::time::Duration;
 ///
-/// const IPC_PATH: &str = r"\\.\pipe\my_ipc_server";
+/// const IPC_PATH: &str = "/tmp/minidb_example.sock";
 ///
 /// #[derive(Serialize, Deserialize)]
 /// struct Person {

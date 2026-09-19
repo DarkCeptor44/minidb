@@ -815,5 +815,10 @@ fn test_minidb_with_ipc_view_all() {
 }
 
 fn unique_ipc_path(test_name: &str) -> String {
-    format!(r"\\.\pipe\minidb_{}_{}", test_name, std::process::id())
+    #[cfg(windows)]
+    let socket_path = format!(r"\\.\pipe\minidb_{test_name}_{}", std::process::id());
+    #[cfg(unix)]
+    let socket_path = format!("/tmp/minidb_{test_name}_{}.sock", std::process::id());
+
+    socket_path
 }

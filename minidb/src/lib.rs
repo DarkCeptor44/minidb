@@ -190,7 +190,7 @@ impl MiniDB {
     /// ```rust,no_run
     /// use minidb::MiniDB;
     ///
-    /// let db = MiniDB::from_ipc(r"\\.\pipe\minidb").unwrap();
+    /// let db = MiniDB::from_ipc("/tmp/minidb_example.sock").unwrap();
     /// ```
     pub fn from_ipc<P>(ipc_path: P) -> Result<Self>
     where

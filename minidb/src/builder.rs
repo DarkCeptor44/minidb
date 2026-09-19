@@ -65,14 +65,14 @@ impl MiniDBBuilder {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use minidb::MiniDB;
     ///
     /// // create a MiniDB builder with the file path
     /// let db = MiniDB::builder().path("test.redb");
     ///
     /// // create a MiniDB builder with the IPC server path
-    /// let db = MiniDB::builder().ipc_path(r"\\.\pipe\minidb");
+    /// let db = MiniDB::builder().ipc_path("/tmp/minidb_example.sock");
     /// ```
     #[must_use]
     pub fn new() -> Self {
@@ -295,7 +295,7 @@ impl MiniDBBuilder {
     ///
     /// // create a MiniDB with an IPC server path
     /// let db = MiniDB::builder()
-    ///     .ipc_path(r"\\.\pipe\minidb");
+    ///     .ipc_path("/tmp/minidb_example.sock");
     /// ```
     #[must_use]
     pub fn ipc_path<P>(mut self, path: P) -> Self
@@ -323,7 +323,7 @@ impl MiniDBBuilder {
     ///
     /// // create a MiniDB with an IPC server path
     /// let db = MiniDB::builder()
-    ///     .set_ipc_path(Some(r"\\.\pipe\minidb"));
+    ///     .set_ipc_path(Some("/tmp/minidb_example.sock"));
     /// ```
     #[must_use]
     pub fn set_ipc_path<P>(mut self, path: Option<P>) -> Self

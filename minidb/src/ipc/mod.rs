@@ -5,6 +5,8 @@
 //! # IPC
 //!
 //! This module provides an IPC implementation for MiniDB.
+//!
+//! **Note**: This module is **experimental** because it was mostly written by AI, but tested by me.
 
 mod client;
 mod server;

@@ -13,6 +13,7 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 * Optional encryption using [XChaCha20Poly1305](https://crates.io/crates/chacha20poly1305)
 * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
 * "Relational" (requires manual management of foreign keys)
+* IPC fallback with helper server
 
 ## MSRV
 

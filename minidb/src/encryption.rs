@@ -5,12 +5,12 @@
 use crate::{ArgonKey, Error, error::Result};
 use argon2::{
     Algorithm, Argon2, Params as ArgonParams, PasswordHasher, Version,
-    password_hash::{SaltString, rand_core::RngCore},
+    password_hash::{
+        SaltString,
+        rand_core::{OsRng, RngCore},
+    },
 };
-use chacha20poly1305::{
-    XChaCha20Poly1305, XNonce,
-    aead::{Aead, OsRng},
-};
+use chacha20poly1305::{XChaCha20Poly1305, XNonce, aead::Aead};
 
 /// Decrypt bytes using a cipher and ciphertext
 ///

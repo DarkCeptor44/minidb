@@ -1,14 +1,11 @@
-use minidb::{
-    MiniDB, Table,
-    serde::{Deserialize, Serialize},
-};
+use minidb::{MiniDB, Table};
+use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
 // If you have the `macros` feature enabled, you can use the derive macro like this:
 
 // #[derive(Debug, Table, Serialize, Deserialize, PartialEq)]
 // #[minidb(name = "people")]
-// #[serde(crate = "minidb::serde")] // required if using re-exported serde
 // struct Person {
 //     #[key]
 //     id: String,
@@ -17,7 +14,6 @@ use tempfile::NamedTempFile;
 // }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[serde(crate = "minidb::serde")] // required if using re-exported serde
 struct Person {
     id: String,
     name: String,
@@ -41,9 +37,10 @@ fn main() {
     let temp_file = NamedTempFile::new().unwrap();
 
     // 1. Create a new database without encryption and only one table (Person)
-    let db = MiniDB::builder(temp_file.path())
+    let db = MiniDB::builder()
+        .path(temp_file.path())
         .table::<Person>()
-        .build()
+        .open()
         .unwrap();
 
     // 2. Insert a new person

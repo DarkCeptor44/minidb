@@ -1,4 +1,8 @@
-pub type Result<T> = std::result::Result<T, Error>;
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+pub(crate) type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can occur while using MiniDB
 #[derive(Debug, thiserror::Error)]
@@ -31,6 +35,14 @@ pub enum Error {
     #[error("hashing error: {0}")]
     Hashing(argon2::password_hash::Error),
 
+    /// Something happened while doing IPC operations
+    #[error("IPC error: {0}")]
+    Ipc(String),
+
+    /// Something happened while trying to connect to an IPC server
+    #[error("I/O error in IPC connection: {0}")]
+    IpcConnection(#[from] std::io::Error),
+
     /// Something happened while serializing to JSON
     #[error("JSON error: {0}")]
     JSON(#[from] serde_json::Error),
@@ -42,6 +54,10 @@ pub enum Error {
     /// Missing hash output
     #[error("missing hash output")]
     MissingHashOutput,
+
+    /// Missing database file path
+    #[error("missing database file path")]
+    MissingPath,
 
     /// Something happened while serializing or deserializing
     #[error("serialization error: {0}")]
@@ -69,6 +85,14 @@ pub enum Error {
     /// Something happened while doing transaction operations
     #[error("transaction error: {0}")]
     Transaction(#[from] redb::TransactionError),
+
+    /// The IPC response was unexpected
+    #[error("unexpected IPC response")]
+    UnexpectedIpcResponse,
+
+    /// The IPC operation is not supported
+    #[error("unsupported IPC operation")]
+    UnsupportedIpcOperation,
 }
 
 impl From<argon2::password_hash::Error> for Error {

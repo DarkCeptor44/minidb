@@ -2,28 +2,24 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::{fmt::Debug, marker::PhantomData};
-
 use crate::{
     encryption::decrypt_bytes,
     error::{Error, Result},
 };
 use chacha20poly1305::XChaCha20Poly1305;
-use redb::{Range, TableDefinition};
+use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, marker::PhantomData};
 
 /// A table model. A table model is a struct that implements the [`Table`] trait.
 ///
 /// ## Example
 ///
-/// ```rust,no_run
-/// use minidb::{
-///     serde::{Deserialize, Serialize},
-///     Table,
-/// };
+/// ```rust
+/// use minidb::{Table, TableDefinition};
+/// use serde::{Deserialize, Serialize};
 ///
 /// #[derive(Serialize, Deserialize)]
-/// #[serde(crate = "minidb::serde")] // required if using re-exported serde
 /// struct Person {
 ///     id: String,
 ///     name: String,
@@ -31,7 +27,7 @@ use serde::{Deserialize, Serialize};
 /// }
 ///
 /// impl Table for Person {
-///     const TABLE: redb::TableDefinition<'_, &'static str, &[u8]> = redb::TableDefinition::new("people");
+///     const TABLE: TableDefinition<'_, &'static str, &[u8]> = TableDefinition::new("people");
 ///
 ///     fn get_id(&self) -> &str {
 ///         &self.id
@@ -53,9 +49,27 @@ pub trait Table: Serialize + for<'de> Deserialize<'de> {
     fn set_id(&mut self, id: String);
 }
 
+/// The inner iterator for a table
+pub enum TableIteratorInner<'a> {
+    /// The iterator for a local table
+    Local(Box<redb::Range<'a, &'static str, &'static [u8]>>),
+
+    /// The iterator for an IPC table
+    Ipc(std::vec::IntoIter<std::result::Result<(String, Vec<u8>), redb::StorageError>>),
+}
+
+impl Debug for TableIteratorInner<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TableIteratorInner::Local(_) => f.debug_tuple("Local").field(&"<redb::Range>").finish(),
+            TableIteratorInner::Ipc(inner) => f.debug_tuple("Ipc").field(inner).finish(),
+        }
+    }
+}
+
 /// An iterator over a table's items, with optional decryption
 pub struct TableIterator<'a, T> {
-    inner: Range<'a, &'static str, &'static [u8]>,
+    inner: TableIteratorInner<'a>,
     cipher: Option<&'a XChaCha20Poly1305>,
     _phantom: std::marker::PhantomData<T>,
 }
@@ -77,7 +91,7 @@ impl<'a, T> TableIterator<'a, T> {
     ///
     /// A new [`TableIterator`]
     #[must_use]
-    pub fn new(inner: Range<'a, &'static str, &'static [u8]>) -> Self {
+    pub fn new(inner: TableIteratorInner<'a>) -> Self {
         Self {
             inner,
             cipher: None,
@@ -108,25 +122,49 @@ where
     type Item = Result<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result = self.inner.next()?;
+        match &mut self.inner {
+            TableIteratorInner::Local(inner) => {
+                let result = inner.next()?;
+                match result {
+                    Ok((_, value)) => {
+                        let bytes = if let Some(cipher) = &self.cipher {
+                            match decrypt_bytes(cipher, value.value()) {
+                                Ok(d) => d,
+                                Err(e) => return Some(Err(e)),
+                            }
+                        } else {
+                            value.value().to_vec()
+                        };
 
-        match result {
-            Ok((_key, value)) => {
-                let bytes = if let Some(cipher) = &self.cipher {
-                    match decrypt_bytes(cipher, value.value()) {
-                        Ok(d) => d,
-                        Err(e) => return Some(Err(e)),
+                        match postcard::from_bytes(&bytes) {
+                            Ok(item) => Some(Ok(item)),
+                            Err(e) => Some(Err(Error::Serialization(e))),
+                        }
                     }
-                } else {
-                    value.value().to_vec()
-                };
-
-                match postcard::from_bytes(&bytes) {
-                    Ok(item) => Some(Ok(item)),
-                    Err(e) => Some(Err(Error::Serialization(e))),
+                    Err(e) => Some(Err(Error::Storage(e))),
                 }
             }
-            Err(e) => Some(Err(Error::Storage(e))),
+            TableIteratorInner::Ipc(inner) => {
+                let result = inner.next()?;
+                match result {
+                    Ok((_, value)) => {
+                        let bytes = if let Some(cipher) = &self.cipher {
+                            match decrypt_bytes(cipher, &value) {
+                                Ok(d) => d,
+                                Err(e) => return Some(Err(e)),
+                            }
+                        } else {
+                            value
+                        };
+
+                        match postcard::from_bytes(&bytes) {
+                            Ok(item) => Some(Ok(item)),
+                            Err(e) => Some(Err(Error::Serialization(e))),
+                        }
+                    }
+                    Err(e) => Some(Err(Error::Storage(e))),
+                }
+            }
         }
     }
 }

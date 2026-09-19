@@ -29,14 +29,11 @@ impl IpcClient {
     /// ## Errors
     ///
     /// Returns an error if the connection fails
-    pub fn connect<P>(ipc_path: P) -> Result<Self>
-    where
-        P: AsRef<str>,
-    {
-        let name = ipc_path.as_ref().to_fs_name::<GenericFilePath>()?;
+    pub fn connect(ipc_path: &str) -> Result<Self> {
+        let name = ipc_path.to_fs_name::<GenericFilePath>()?;
         let stream = LocalSocketStream::connect(name)?;
 
-        Ok(Self {
+        Ok(IpcClient {
             stream: Mutex::new(stream),
         })
     }

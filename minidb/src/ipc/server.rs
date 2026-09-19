@@ -170,28 +170,32 @@ impl IpcServer {
     where
         S: AsRef<str>,
     {
-        let name = ipc_path.as_ref().to_fs_name::<GenericFilePath>()?;
-        let listener = ListenerOptions::new().name(name).create_sync()?;
+        fn inner(db: &MiniDB, path: &str) -> Result<()> {
+            let name = path.to_fs_name::<GenericFilePath>()?;
+            let listener = ListenerOptions::new().name(name).create_sync()?;
 
-        let local_db = match &db.backend {
-            Backend::Local(db) => db,
-            Backend::Ipc(_) => {
-                return Err(Error::Ipc(
-                    "Cannot run IPC server on an IPC client database".to_string(),
-                ));
-            }
-        };
+            let local_db = match &db.backend {
+                Backend::Local(db) => db,
+                Backend::Ipc(_) => {
+                    return Err(Error::Ipc(
+                        "Cannot run IPC server on an IPC client database".to_string(),
+                    ));
+                }
+            };
 
-        std::thread::scope(|s| {
-            for stream in listener.incoming() {
-                let Ok(mut stream) = stream else { continue };
-                s.spawn(move || {
-                    Self::handle_connection(local_db, &mut stream);
-                });
-            }
-        });
+            std::thread::scope(|s| {
+                for stream in listener.incoming() {
+                    let Ok(mut stream) = stream else { continue };
+                    s.spawn(move || {
+                        IpcServer::handle_connection(local_db, &mut stream);
+                    });
+                }
+            });
 
-        Ok(())
+            Ok(())
+        }
+
+        inner(db, ipc_path.as_ref())
     }
 
     fn handle_connection(local_db: &Database, stream: &mut LocalSocketStream) {

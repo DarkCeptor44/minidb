@@ -196,11 +196,15 @@ impl MiniDB {
     where
         P: AsRef<str>,
     {
-        let client = IpcClient::connect(ipc_path)?;
-        Ok(Self {
-            backend: Backend::Ipc(client),
-            cipher: None,
-        })
+        fn inner(path: &str) -> Result<MiniDB> {
+            let client = IpcClient::connect(path)?;
+            Ok(MiniDB {
+                backend: Backend::Ipc(client),
+                cipher: None,
+            })
+        }
+
+        inner(ipc_path.as_ref())
     }
 
     /// Creates a new [`MiniDB`] from a [`redb::Database`]
@@ -272,33 +276,40 @@ impl MiniDB {
     where
         T: Table,
     {
-        let values: Vec<Vec<u8>> = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(T::TABLE)?;
+        fn fetch_raw_rows(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+        ) -> Result<Vec<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let tbl = txn.open_table(table)?;
 
-                let mut results = Vec::new();
-                for item in table.iter()? {
-                    let (_key, value) = item?;
+                    let mut results = Vec::new();
+                    for item in tbl.iter()? {
+                        let (_key, value) = item?;
 
-                    results.push(value.value().to_vec());
+                        results.push(value.value().to_vec());
+                    }
+
+                    Ok(results)
                 }
-
-                results
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::GetAll {
-                    table: T::TABLE.to_string(),
-                })? {
-                    IpcResponse::Rows(items) => items.into_iter().map(|(_, v)| v).collect(),
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::GetAll {
+                        table: table.to_string(),
+                    })? {
+                        IpcResponse::Rows(items) => Ok(items.into_iter().map(|(_, v)| v).collect()),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
-        let mut results = Vec::with_capacity(values.len());
-        for bytes in values {
+        let raw_rows = fetch_raw_rows(self, T::TABLE)?;
+        let mut results = Vec::with_capacity(raw_rows.len());
+
+        for bytes in raw_rows {
             let data: T = if let Some(cipher) = &self.cipher {
                 let decrypted = decrypt_bytes(cipher, &bytes)?;
                 postcard::from_bytes(&decrypted)?
@@ -379,42 +390,35 @@ impl MiniDB {
     where
         T: Table,
     {
-        self.create_table_impl(T::TABLE)
-    }
+        fn inner(db: &MiniDB, table: TableDefinition<'_, &'static str, &[u8]>) -> Result<()> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    {
+                        let _ = txn
+                            .open_table(table)
+                            .map_err(|e| Error::TableInitialization {
+                                name: table.to_string(),
+                                source: e,
+                            })?;
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::CreateTable {
+                        table: table.to_string(),
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
 
-    /// Creates the table if it doesn't exist
-    ///
-    /// Use [`MiniDB::create_table`] instead
-    pub(crate) fn create_table_impl<K, V>(&self, table: TableDefinition<K, V>) -> Result<()>
-    where
-        K: redb::Key,
-        V: redb::Value,
-    {
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let _ = txn
-                        .open_table(table)
-                        .map_err(|e| Error::TableInitialization {
-                            name: table.to_string(),
-                            source: e,
-                        })?;
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::CreateTable {
-                    table: table.to_string(),
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
+            Ok(())
         }
 
-        Ok(())
+        inner(self, T::TABLE)
     }
 
     /// Exports a table as a JSON string
@@ -473,31 +477,37 @@ impl MiniDB {
         T: Table,
         F: FnMut(&T),
     {
-        let values: Vec<Vec<u8>> = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(T::TABLE)?;
+        fn fetch_raw_rows(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+        ) -> Result<Vec<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let table = txn.open_table(table)?;
 
-                let mut results = Vec::new();
-                for item in table.iter()? {
-                    let (_, value) = item?;
+                    let mut results = Vec::new();
+                    for item in table.iter()? {
+                        let (_, value) = item?;
 
-                    results.push(value.value().to_vec());
+                        results.push(value.value().to_vec());
+                    }
+
+                    Ok(results)
                 }
-
-                results
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::GetAll {
-                    table: T::TABLE.to_string(),
-                })? {
-                    IpcResponse::Rows(items) => items.into_iter().map(|(_, v)| v).collect(),
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::GetAll {
+                        table: table.to_string(),
+                    })? {
+                        IpcResponse::Rows(items) => Ok(items.into_iter().map(|(_, v)| v).collect()),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let values = fetch_raw_rows(self, T::TABLE)?;
         for bytes in values {
             let data: T = if let Some(cipher) = &self.cipher {
                 let decrypted = decrypt_bytes(cipher, &bytes)?;
@@ -538,6 +548,37 @@ impl MiniDB {
     where
         T: Table,
     {
+        fn write_row(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+            key: &str,
+            value: &[u8],
+        ) -> Result<()> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    {
+                        let mut table = txn.open_table(table)?;
+                        table.insert(key, value)?;
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::Insert {
+                        table: table.to_string(),
+                        key: key.to_string(),
+                        value: value.to_vec(),
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
         if item.get_id().trim().is_empty() {
             let id = cuid2::slug();
             item.set_id(id);
@@ -550,29 +591,7 @@ impl MiniDB {
             bytes
         };
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    table.insert(item.get_id(), to_write.as_slice())?;
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::Insert {
-                    table: T::TABLE.to_string(),
-                    key: item.get_id().to_string(),
-                    value: to_write,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
-        }
-
-        Ok(())
+        write_row(self, T::TABLE, item.get_id(), &to_write)
     }
 
     /// Inserts multiple items into a table
@@ -605,7 +624,38 @@ impl MiniDB {
     where
         T: Table,
     {
-        let mut new_items = Vec::new();
+        fn write_rows(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+            items: Vec<(String, Vec<u8>)>,
+        ) -> Result<()> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    {
+                        let mut tbl = txn.open_table(table)?;
+                        for (id, to_write) in &items {
+                            tbl.insert(id.as_str(), to_write.as_slice())?;
+                        }
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::InsertMany {
+                        table: table.to_string(),
+                        items,
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        let mut new_items = Vec::with_capacity(items.len());
         for item in items {
             if item.get_id().trim().is_empty() {
                 let id = cuid2::slug();
@@ -622,30 +672,7 @@ impl MiniDB {
             new_items.push((item.get_id().to_string(), to_write));
         }
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    for (id, to_write) in new_items {
-                        table.insert(&*id, to_write.as_slice())?;
-                    }
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::InsertMany {
-                    table: T::TABLE.to_string(),
-                    items: new_items,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
-        }
-
-        Ok(())
+        write_rows(self, T::TABLE, new_items)
     }
 
     /// Checks if a table is empty
@@ -673,22 +700,26 @@ impl MiniDB {
     where
         T: Table,
     {
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(T::TABLE)?;
-                Ok(table.is_empty()?)
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::IsEmpty {
-                    table: T::TABLE.to_string(),
-                })? {
-                    IpcResponse::Bool(is_empty) => Ok(is_empty),
-                    IpcResponse::Error(e) => Err(Error::Ipc(e)),
-                    _ => Err(Error::UnexpectedIpcResponse),
+        fn inner(db: &MiniDB, table: TableDefinition<'_, &'static str, &[u8]>) -> Result<bool> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let table = txn.open_table(table)?;
+                    Ok(table.is_empty()?)
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::IsEmpty {
+                        table: table.to_string(),
+                    })? {
+                        IpcResponse::Bool(is_empty) => Ok(is_empty),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
         }
+
+        inner(self, T::TABLE)
     }
 
     /// Retrieves an item from a table
@@ -725,24 +756,32 @@ impl MiniDB {
     where
         T: Table,
     {
-        let maybe_bytes = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(T::TABLE)?;
-                table.get(id)?.map(|v| v.value().to_vec())
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::Get {
-                    table: T::TABLE.to_string(),
-                    key: id.to_string(),
-                })? {
-                    IpcResponse::Value(bytes) => bytes,
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+        fn fetch_raw_row(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+            id: &str,
+        ) -> Result<Option<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let tbl = txn.open_table(table)?;
+
+                    Ok(tbl.get(id)?.map(|v| v.value().to_vec()))
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::Get {
+                        table: table.to_string(),
+                        key: id.to_string(),
+                    })? {
+                        IpcResponse::Value(bytes) => Ok(bytes),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let maybe_bytes = fetch_raw_row(self, T::TABLE, id)?;
         if let Some(bytes) = maybe_bytes {
             let item: T = if let Some(cipher) = &self.cipher {
                 let decrypted = decrypt_bytes(cipher, &bytes)?;
@@ -775,24 +814,27 @@ impl MiniDB {
     where
         T: for<'a> Deserialize<'a>,
     {
-        let maybe_bytes = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(META_TABLE)?;
+        fn fetch_raw_row(db: &MiniDB, key: &str) -> Result<Option<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let tbl = txn.open_table(META_TABLE)?;
 
-                table.get(key)?.map(|v| v.value().to_vec())
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::GetMeta {
-                    key: key.to_string(),
-                })? {
-                    IpcResponse::Value(bytes) => bytes,
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+                    Ok(tbl.get(key)?.map(|v| v.value().to_vec()))
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::GetMeta {
+                        key: key.to_string(),
+                    })? {
+                        IpcResponse::Value(bytes) => Ok(bytes),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let maybe_bytes = fetch_raw_row(self, key)?;
         if let Some(bytes) = maybe_bytes {
             let item: T = postcard::from_bytes(&bytes)?;
             Ok(Some(item))
@@ -830,23 +872,27 @@ impl MiniDB {
     where
         T: for<'a> Deserialize<'a>,
     {
-        let maybe_bytes = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_read()?;
-                let table = txn.open_table(SETTINGS_TABLE)?;
-                table.get(key)?.map(|v| v.value().to_vec())
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::GetSetting {
-                    key: key.to_string(),
-                })? {
-                    IpcResponse::Value(bytes) => bytes,
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+        fn fetch_raw_row(db: &MiniDB, key: &str) -> Result<Option<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_read()?;
+                    let tbl = txn.open_table(SETTINGS_TABLE)?;
+
+                    Ok(tbl.get(key)?.map(|v| v.value().to_vec()))
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::GetSetting {
+                        key: key.to_string(),
+                    })? {
+                        IpcResponse::Value(bytes) => Ok(bytes),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let maybe_bytes = fetch_raw_row(self, key)?;
         if let Some(bytes) = maybe_bytes {
             let item: T = if let Some(cipher) = &self.cipher {
                 let decrypted = decrypt_bytes(cipher, &bytes)?;
@@ -893,28 +939,35 @@ impl MiniDB {
     where
         T: Table,
     {
-        let maybe_bytes = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                let result = {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    table.remove(key)?.map(|v| v.value().to_vec())
-                };
-                txn.commit()?;
-                result
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::Remove {
-                    table: T::TABLE.to_string(),
-                    key: key.to_string(),
-                })? {
-                    IpcResponse::Value(bytes) => bytes,
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+        fn remove_raw_row(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+            key: &str,
+        ) -> Result<Option<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    let result = {
+                        let mut tbl = txn.open_table(table)?;
+                        tbl.remove(key)?.map(|v| v.value().to_vec())
+                    };
+                    txn.commit()?;
+                    Ok(result)
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::Remove {
+                        table: table.to_string(),
+                        key: key.to_string(),
+                    })? {
+                        IpcResponse::Value(bytes) => Ok(bytes),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let maybe_bytes = remove_raw_row(self, T::TABLE, key)?;
         if let Some(bytes) = maybe_bytes {
             let item: T = if let Some(cipher) = &self.cipher {
                 let decrypted = decrypt_bytes(cipher, &bytes)?;
@@ -956,33 +1009,40 @@ impl MiniDB {
     where
         T: Table,
     {
-        let values: Vec<Vec<u8>> = match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                let mut results = Vec::new();
-                {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    for key in keys {
-                        if let Some(bytes) = table.remove(key)? {
-                            results.push(bytes.value().to_vec());
+        fn remove_raw_rows(
+            db: &MiniDB,
+            table: TableDefinition<'_, &'static str, &[u8]>,
+            keys: &[&str],
+        ) -> Result<Vec<Vec<u8>>> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    let mut results = Vec::new();
+                    {
+                        let mut tbl = txn.open_table(table)?;
+                        for key in keys {
+                            if let Some(bytes) = tbl.remove(key)? {
+                                results.push(bytes.value().to_vec());
+                            }
                         }
                     }
+                    txn.commit()?;
+                    Ok(results)
                 }
-                txn.commit()?;
-                results
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::RemoveMany {
-                    table: T::TABLE.to_string(),
-                    keys: keys.iter().map(std::string::ToString::to_string).collect(),
-                })? {
-                    IpcResponse::Rows(items) => items.into_iter().map(|(_, v)| v).collect(),
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::RemoveMany {
+                        table: table.to_string(),
+                        keys: keys.iter().map(ToString::to_string).collect(),
+                    })? {
+                        IpcResponse::Rows(items) => Ok(items.into_iter().map(|(_, v)| v).collect()),
+                        IpcResponse::Error(e) => Err(Error::Ipc(e)),
+                        _ => Err(Error::UnexpectedIpcResponse),
+                    }
                 }
             }
-        };
+        }
 
+        let values = remove_raw_rows(self, T::TABLE, keys)?;
         let mut decrypted_items = Vec::with_capacity(values.len());
         for bytes in values {
             let data: T = if let Some(cipher) = &self.cipher {
@@ -1003,30 +1063,33 @@ impl MiniDB {
     where
         T: Serialize,
     {
-        let bytes = postcard::to_stdvec(value)?;
+        fn write_row(db: &MiniDB, key: &str, bytes: &[u8]) -> Result<()> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    {
+                        let mut tbl = txn.open_table(META_TABLE)?;
+                        tbl.insert(key, bytes)?;
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::SetMeta {
+                        key: key.to_string(),
+                        value: bytes.to_vec(),
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(META_TABLE)?;
-                    table.insert(key, bytes.as_slice())?;
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::SetMeta {
-                    key: key.to_string(),
-                    value: bytes,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
+            Ok(())
         }
 
-        Ok(())
+        let bytes = postcard::to_stdvec(value)?;
+        write_row(self, key, &bytes)
     }
 
     /// Sets an item in the settings table
@@ -1050,6 +1113,31 @@ impl MiniDB {
     where
         T: Serialize,
     {
+        fn write_row(db: &MiniDB, key: &str, bytes: &[u8]) -> Result<()> {
+            match &db.backend {
+                Backend::Local(redb) => {
+                    let txn = redb.begin_write()?;
+                    {
+                        let mut tbl = txn.open_table(SETTINGS_TABLE)?;
+                        tbl.insert(key, bytes)?;
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::SetSetting {
+                        key: key.to_string(),
+                        value: bytes.to_vec(),
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
         let bytes = postcard::to_stdvec(value)?;
         let to_write: Vec<u8> = if let Some(cipher) = &self.cipher {
             encrypt_bytes(cipher, &bytes)?
@@ -1057,28 +1145,7 @@ impl MiniDB {
             bytes
         };
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(SETTINGS_TABLE)?;
-                    table.insert(key, to_write.as_slice())?;
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::SetSetting {
-                    key: key.to_string(),
-                    value: to_write,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
-        }
-
-        Ok(())
+        write_row(self, key, &to_write)
     }
 
     /// Starts a write transaction.
@@ -1103,6 +1170,7 @@ impl MiniDB {
     where
         F: FnOnce(&Transaction) -> Result<R>,
     {
+        // TODO morphize this
         match &self.backend {
             Backend::Local(db) => {
                 let txn = db.begin_write()?;
@@ -1188,6 +1256,37 @@ impl MiniDB {
     where
         T: Table,
     {
+        fn write_row(
+            db: &MiniDB,
+            table: TableDefinition<'static, &'static str, &[u8]>,
+            key: &str,
+            value: &[u8],
+        ) -> Result<()> {
+            match &db.backend {
+                Backend::Local(db) => {
+                    let txn = db.begin_write()?;
+                    {
+                        let mut tbl = txn.open_table(table)?;
+                        tbl.insert(key, value)?;
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::Update {
+                        table: table.to_string(),
+                        key: key.to_string(),
+                        value: value.to_vec(),
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
         if item.get_id().trim().is_empty() {
             return Err(Error::EmptyID);
         }
@@ -1199,29 +1298,7 @@ impl MiniDB {
             bytes
         };
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    table.insert(item.get_id(), to_write.as_slice())?;
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::Update {
-                    table: T::TABLE.to_string(),
-                    key: item.get_id().to_string(),
-                    value: to_write,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
-        }
-
-        Ok(())
+        write_row(self, T::TABLE, item.get_id(), &to_write)
     }
 
     /// Updates multiple items in the table
@@ -1258,7 +1335,38 @@ impl MiniDB {
     where
         T: Table,
     {
-        let mut new_items = Vec::new();
+        fn write_rows(
+            db: &MiniDB,
+            table: TableDefinition<'static, &'static str, &[u8]>,
+            items: Vec<(String, Vec<u8>)>,
+        ) -> Result<()> {
+            match &db.backend {
+                Backend::Local(db) => {
+                    let txn = db.begin_write()?;
+                    {
+                        let mut tbl = txn.open_table(table)?;
+                        for (id, to_write) in &items {
+                            tbl.insert(id.as_str(), to_write.as_slice())?;
+                        }
+                    }
+                    txn.commit()?;
+                }
+                Backend::Ipc(client) => {
+                    match client.send_request(&IpcRequest::UpdateMany {
+                        table: table.to_string(),
+                        items,
+                    })? {
+                        IpcResponse::Ok => {}
+                        IpcResponse::Error(e) => return Err(Error::Ipc(e)),
+                        _ => return Err(Error::UnexpectedIpcResponse),
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        let mut new_items = Vec::with_capacity(items.len());
         for item in items {
             if item.get_id().trim().is_empty() {
                 return Err(Error::EmptyID);
@@ -1274,30 +1382,7 @@ impl MiniDB {
             new_items.push((item.get_id().to_string(), to_write));
         }
 
-        match &self.backend {
-            Backend::Local(db) => {
-                let txn = db.begin_write()?;
-                {
-                    let mut table = txn.open_table(T::TABLE)?;
-                    for (id, to_write) in new_items {
-                        table.insert(&*id, to_write.as_slice())?;
-                    }
-                }
-                txn.commit()?;
-            }
-            Backend::Ipc(client) => {
-                match client.send_request(&IpcRequest::UpdateMany {
-                    table: T::TABLE.to_string(),
-                    items: new_items,
-                })? {
-                    IpcResponse::Ok => {}
-                    IpcResponse::Error(e) => return Err(Error::Ipc(e)),
-                    _ => return Err(Error::UnexpectedIpcResponse),
-                }
-            }
-        }
-
-        Ok(())
+        write_rows(self, T::TABLE, new_items)
     }
 
     /// Returns an iterator over all items in a table, allowing for custom processing
@@ -1327,6 +1412,7 @@ impl MiniDB {
         T: Table,
         F: FnOnce(TableIterator<'_, T>) -> R,
     {
+        // TODO morphize this
         match &self.backend {
             Backend::Local(db) => {
                 let txn = db.begin_read()?;

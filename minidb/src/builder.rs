@@ -128,20 +128,23 @@ impl MiniDBBuilder {
     where
         T: Table + 'static,
     {
-        self.register_table_impl(T::TABLE)
-    }
+        fn inner(
+            mut builder: MiniDBBuilder,
+            table: TableDefinition<'static, &'static str, &[u8]>,
+        ) -> MiniDBBuilder {
+            builder.initializers.push(Box::new(move |txn| {
+                txn.open_table(table)
+                    .map(|_| ())
+                    .map_err(|e| Error::TableInitialization {
+                        name: table.to_string(),
+                        source: e,
+                    })?;
+                Ok(())
+            }));
+            builder
+        }
 
-    fn register_table_impl(mut self, table: TableDefinition<'static, &'static str, &[u8]>) -> Self {
-        self.initializers.push(Box::new(move |txn| {
-            txn.open_table(table)
-                .map(|_| ())
-                .map_err(|e| Error::TableInitialization {
-                    name: table.to_string(),
-                    source: e,
-                })?;
-            Ok(())
-        }));
-        self
+        inner(self, T::TABLE)
     }
 
     /// Sets the key source
@@ -362,7 +365,7 @@ impl MiniDBBuilder {
     /// ```
     pub fn open(self) -> Result<MiniDB> {
         if let Some(pipe_path) = &self.ipc_path
-            && let Ok(ipc_client) = IpcClient::connect(pipe_path.to_string_lossy())
+            && let Ok(ipc_client) = IpcClient::connect(&pipe_path.to_string_lossy())
         {
             let mut store = MiniDB {
                 backend: Backend::Ipc(ipc_client),

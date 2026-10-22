@@ -20,6 +20,10 @@
 //! * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
 //! * "Relational" (requires manual management of foreign keys)
 //!
+//! ## Is This Vibecoded?
+//!
+//! If by vibecoded you mean "I have no experience with coding and AI made this for me", then no. I have been coding for more than 12 years, 2 of them in Rust. I didn't let AI run free in this codebase, I had an idea, implemented a shittier version, and then asked AI to teach me how things could be better. The recently-developed IPC submodule though is mostly AI, because I had never messed with IPC before and needed a way to access the database from another process. Unit and integration tests show it running smoothly though. If you are skeptical about potential vulnerabilities, check out the [audits](#audits).
+//!
 //! ## MSRV
 //!
 //! | Version | MSRV | Edition |
@@ -84,6 +88,18 @@
 //! ```
 //!
 //! See the individual module and item documentation for further details on specific components.
+//!
+//! ## Benchmarks
+//!
+//! You can check out the benchmarks [here](https://github.com/DarkCeptor44/minidb/blob/master/minidb/docs/benchmarks.md).
+//!
+//! ## Audits
+//!
+//! | **Auditor** | **Audit Date** | **Version** | **Vulnerabilities** |
+//! | --- | --- | --- | --- |
+//! | [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-08-01 | 0.4.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
+//!
+//! * I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 //!
 //! ## License
 //!

@@ -17,6 +17,10 @@ The main MiniDB crate providing a structured wrapper for [redb](https://crates.i
 * "Relational" (requires manual management of foreign keys)
 * IPC fallback with helper server
 
+## Is This Vibecoded?
+
+If by vibecoded you mean "I have no experience with coding and AI made this for me", then no. I have been coding for more than 12 years, 2 of them in Rust. I didn't let AI run free in this codebase, I had an idea, implemented a shittier version, and then asked AI to teach me how things could be better. The recently-developed IPC submodule though is mostly AI, because I had never messed with IPC before and needed a way to access the database from another process. Unit and integration tests show it running smoothly though. If you are skeptical about potential vulnerabilities, check out the [audits](#audits).
+
 ## MSRV
 
 | Version | MSRV | Edition |

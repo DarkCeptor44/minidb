@@ -1170,7 +1170,7 @@ impl MiniDB {
     where
         F: FnOnce(&Transaction) -> Result<R>,
     {
-        // TODO morphize this
+        // TODO do type erasure
         match &self.backend {
             Backend::Local(db) => {
                 let txn = db.begin_write()?;
@@ -1412,7 +1412,7 @@ impl MiniDB {
         T: Table,
         F: FnOnce(TableIterator<'_, T>) -> R,
     {
-        // TODO morphize this
+        // TODO do type erasure
         match &self.backend {
             Backend::Local(db) => {
                 let txn = db.begin_read()?;

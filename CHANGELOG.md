@@ -2,6 +2,28 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.0](https://github.com/DarkCeptor44/minidb/compare/f416f008e0ecd94eb551fd88729f33fd4db72193..v0.5.0) - 2026-10-23
+#### Bug Fixes
+- (**minidb**) ipc code now works and supports multi connections - ([83b81a1](https://github.com/DarkCeptor44/minidb/commit/83b81a1b74bee1ce8f9ad46f4ab55770a07a9ca6)) - DarkCeptor44
+- (**minidb**) sort out the ipc mess and their rustdocs - ([b501868](https://github.com/DarkCeptor44/minidb/commit/b501868054614a619566d2957a42e88421af610f)) - DarkCeptor44
+#### Performance
+- (**minidb**) do type erasure on a bunch of the main methods - ([925da98](https://github.com/DarkCeptor44/minidb/commit/925da98ecf05c3cecaaf88706a22067174e6056c)) - DarkCeptor44
+- (**minidb**) make a non generic method for registering tables in builder.rs - ([0a72814](https://github.com/DarkCeptor44/minidb/commit/0a72814ebcd64224cfa63cadac2376b08549dd38)) - DarkCeptor44
+#### Refactors
+- (**minidb**) use linux path for example socket paths; use proper windows or linux path for ipc test - ([f49dde7](https://github.com/DarkCeptor44/minidb/commit/f49dde7a4ef2ac512b9a46ea1410359845f5cc88)) - DarkCeptor44
+- ![BREAKING](https://img.shields.io/badge/BREAKING-red) (**minidb**) update redb and syn dependencies; raise MSRV - ([d6e3fd1](https://github.com/DarkCeptor44/minidb/commit/d6e3fd17e7832138a3c183b376c5811e866c8102)) - DarkCeptor44
+- (**minidb**) move ipc code to it's own module - ([c9fa1b4](https://github.com/DarkCeptor44/minidb/commit/c9fa1b43215487ecbbaf7e2c078d00c2ebfdd85f)) - DarkCeptor44
+- (**minidb**) implement IpcClient::send_request - ([622e919](https://github.com/DarkCeptor44/minidb/commit/622e9193cd9e1cd7979d3087344ecc100e4ab2d1)) - DarkCeptor44
+- (**minidb**) add more builder methods for key_source, path and ipc_path - ([d79399d](https://github.com/DarkCeptor44/minidb/commit/d79399dabfa97a24f36e098a550f6963492bf60f)) - DarkCeptor44
+- (**minidb**) remove IpcResponse::IsEmpty and use Bool instead; add rustdocs to IpcResponse - ([39274b4](https://github.com/DarkCeptor44/minidb/commit/39274b4f61a3369abd4f9a5d2cbcebf72fb21873)) - DarkCeptor44
+- ![BREAKING](https://img.shields.io/badge/BREAKING-red) (**minidb**) initial work for IPC client integration - ([195e28f](https://github.com/DarkCeptor44/minidb/commit/195e28f47628a7f1a043ea9313a345a94129098b)) - DarkCeptor44
+- ![BREAKING](https://img.shields.io/badge/BREAKING-red) (**minidb**) rename MiniDBBuilder build method to open - ([9a2eeef](https://github.com/DarkCeptor44/minidb/commit/9a2eeef0d4125f7ee37a40afd5209739bcdebccd)) - DarkCeptor44
+- (**minidb**) update dependencies for chacha20poly1305, syn, and adjust newly changed features - ([fd89726](https://github.com/DarkCeptor44/minidb/commit/fd89726252e8e528b348061b7a049163d4b2a4f9)) - DarkCeptor44
+- add ipc server helper implementation - ([827580a](https://github.com/DarkCeptor44/minidb/commit/827580a568da98d2a149aafa5c437fd717cfdc77)) - DarkCeptor44
+- remove re-exports for redb and serde to avoid future headaches - ([6161863](https://github.com/DarkCeptor44/minidb/commit/6161863e95e78f8ab95e094b13c67c4c3a106890)) - DarkCeptor44
+
+- - -
+
 ## [v0.4.0](https://github.com/DarkCeptor44/minidb/compare/00583dc09483e82f9fbef5e3e7c3a16395f7417f..v0.4.0) - 2026-05-02
 #### Features
 - add cocogitto to project - ([00583dc](https://github.com/DarkCeptor44/minidb/commit/00583dc09483e82f9fbef5e3e7c3a16395f7417f)) - DarkCeptor44

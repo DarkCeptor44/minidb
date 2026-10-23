@@ -29,7 +29,7 @@
 //!
 //! | Version | MSRV | Edition |
 //! | --- | --- | --- |
-//! | <= 0.4.0 | 1.89 | 2024 |
+//! | <= 0.5.0 | 1.90 | 2024 |
 //!
 //! ## Getting Started
 //!
@@ -37,7 +37,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! minidb = { version = "0.4.0", features = ["macros"] } # Or just "0.4.0" if you don't need the macros
+//! minidb = { version = "0.5.0", features = ["macros"] } # Or just "0.5.0" if you don't need the macros
 //! serde = { version = "1.0.229", features = ["derive"] }
 //! ```
 //!
@@ -98,7 +98,7 @@
 //!
 //! | **Auditor** | **Audit Date** | **Version** | **Vulnerabilities** |
 //! | --- | --- | --- | --- |
-//! | [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-08-01 | 0.4.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
+//! | [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-08-01 | 0.5.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
 //!
 //! * I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 //!

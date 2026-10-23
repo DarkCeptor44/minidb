@@ -25,7 +25,8 @@ If by vibecoded you mean "I have no experience with coding and AI made this for 
 
 | Version | MSRV | Edition |
 | --- | --- | --- |
-| <= 0.5.0 | 1.90 | 2024 |
+| `<= 0.4.0` | 1.89 | 2024 |
+| 0.5.0 | 1.90 | 2024 |
 
 ## Installation
 

@@ -19,6 +19,7 @@
 //! * Optional encryption using [XChaCha20Poly1305]
 //! * Includes derive macros (e.g., `#[derive(Table)]`) for easy table definition
 //! * "Relational" (requires manual management of foreign keys)
+//! * IPC fallback with helper server
 //!
 //! ## Is This Vibecoded?
 //!

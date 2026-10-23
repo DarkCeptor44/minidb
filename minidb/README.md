@@ -79,7 +79,7 @@ if let Some(new_person) = new_person {
 
 | **Auditor** | **Audit Date** | **Version** | **Vulnerabilities** |
 | --- | --- | --- | --- |
-| [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-08-01 | 0.5.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
+| [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-10-22 | 0.5.0 | 1 ([`atomic-polyfill`](https://rustsec.org/advisories/RUSTSEC-2023-0089) - unmaintained) |
 
 * I personally don't consider unmaintained crates that big of an issue, but if `postcard` ever updates its version of `heapless` then I'll update `postcard`
 

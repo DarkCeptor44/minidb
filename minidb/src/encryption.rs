@@ -26,14 +26,7 @@ use chacha20poly1305::{XChaCha20Poly1305, XNonce, aead::Aead};
 /// ## Errors
 ///
 /// Returns an error if the decryption fails or if the ciphertext is too short
-pub fn decrypt_bytes<C>(cipher: &XChaCha20Poly1305, ciphertext: C) -> Result<Vec<u8>>
-where
-    C: AsRef<[u8]>,
-{
-    decrypt_bytes_impl(cipher, ciphertext.as_ref())
-}
-
-fn decrypt_bytes_impl(cipher: &XChaCha20Poly1305, ciphertext: &[u8]) -> Result<Vec<u8>> {
+pub fn decrypt_bytes(cipher: &XChaCha20Poly1305, ciphertext: &[u8]) -> Result<Vec<u8>> {
     if ciphertext.len() < 24 {
         return Err(Error::CipherTextTooShort(ciphertext.len()));
     }
@@ -61,20 +54,7 @@ fn decrypt_bytes_impl(cipher: &XChaCha20Poly1305, ciphertext: &[u8]) -> Result<V
 /// ## Errors
 ///
 /// Returns an error if the key derivation fails
-pub fn derive_key_from_password<Pass, Salt, Params>(
-    password: Pass,
-    salt: Salt,
-    params: Params,
-) -> Result<ArgonKey>
-where
-    Pass: AsRef<str>,
-    Salt: Into<Option<String>>,
-    Params: Into<Option<ArgonParams>>,
-{
-    derive_key_from_password_impl(password.as_ref(), salt.into(), params.into())
-}
-
-fn derive_key_from_password_impl(
+pub fn derive_key_from_password(
     password: &str,
     salt: Option<String>,
     params: Option<ArgonParams>,
@@ -115,14 +95,7 @@ fn derive_key_from_password_impl(
 /// ## Errors
 ///
 /// Returns an error if the encryption fails
-pub fn encrypt_bytes<P>(cipher: &XChaCha20Poly1305, plaintext: P) -> Result<Vec<u8>>
-where
-    P: AsRef<[u8]>,
-{
-    encrypt_bytes_impl(cipher, plaintext.as_ref())
-}
-
-fn encrypt_bytes_impl(cipher: &XChaCha20Poly1305, plaintext: &[u8]) -> Result<Vec<u8>> {
+pub fn encrypt_bytes(cipher: &XChaCha20Poly1305, plaintext: &[u8]) -> Result<Vec<u8>> {
     let mut rng = OsRng;
     let mut nonce_bytes = [0u8; 24];
     rng.fill_bytes(&mut nonce_bytes);
@@ -148,10 +121,18 @@ mod tests {
     fn test_derive_key_from_password() {
         let password = "abcdef123";
         let salt = SaltString::generate(&mut OsRng);
-        let key1 =
-            time_function!(derive_key_from_password(password, salt.to_string(), None)).unwrap();
-        let key2 =
-            time_function!(derive_key_from_password(password, salt.to_string(), None)).unwrap();
+        let key1 = time_function!(derive_key_from_password(
+            password,
+            Some(salt.to_string()),
+            None
+        ))
+        .unwrap();
+        let key2 = time_function!(derive_key_from_password(
+            password,
+            Some(salt.to_string()),
+            None
+        ))
+        .unwrap();
 
         assert_eq!(key1, key2);
     }
@@ -162,10 +143,18 @@ mod tests {
         let password2 = "dkdkklsakll";
         let salt = SaltString::generate(&mut OsRng);
 
-        let key1 =
-            time_function!(derive_key_from_password(password1, salt.to_string(), None)).unwrap();
-        let key2 =
-            time_function!(derive_key_from_password(password2, salt.to_string(), None)).unwrap();
+        let key1 = time_function!(derive_key_from_password(
+            password1,
+            Some(salt.to_string()),
+            None
+        ))
+        .unwrap();
+        let key2 = time_function!(derive_key_from_password(
+            password2,
+            Some(salt.to_string()),
+            None
+        ))
+        .unwrap();
         assert_ne!(key1, key2);
     }
 
@@ -178,8 +167,12 @@ mod tests {
         let mut keys_map: HashMap<[u8; 32], u64> = HashMap::new();
 
         for _ in 0..N {
-            let key =
-                time_function!(derive_key_from_password(password, salt.to_string(), None)).unwrap();
+            let key = time_function!(derive_key_from_password(
+                password,
+                Some(salt.to_string()),
+                None
+            ))
+            .unwrap();
             *keys_map.entry(key).or_insert(0) += 1;
         }
 

@@ -7,7 +7,7 @@ use crate::{
     encryption::derive_key_from_password, error::Result, ipc::IpcClient, model::Table,
 };
 use chacha20poly1305::{KeyInit, XChaCha20Poly1305};
-use redb::{Database, WriteTransaction};
+use redb::{Database, TableDefinition, WriteTransaction};
 use std::{fmt::Debug, path::PathBuf};
 
 type Initializer = Box<dyn Fn(&WriteTransaction) -> Result<()>>;
@@ -65,14 +65,14 @@ impl MiniDBBuilder {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use minidb::MiniDB;
     ///
     /// // create a MiniDB builder with the file path
     /// let db = MiniDB::builder().path("test.redb");
     ///
     /// // create a MiniDB builder with the IPC server path
-    /// let db = MiniDB::builder().ipc_path(r"\\.\pipe\minidb");
+    /// let db = MiniDB::builder().ipc_path("/tmp/minidb_example.sock");
     /// ```
     #[must_use]
     pub fn new() -> Self {
@@ -124,20 +124,27 @@ impl MiniDBBuilder {
     ///     .table::<Person>();
     /// ```
     #[must_use]
-    pub fn table<T>(mut self) -> Self
+    pub fn table<T>(self) -> Self
     where
         T: Table + 'static,
     {
-        self.initializers.push(Box::new(|txn| {
-            txn.open_table(T::TABLE)
-                .map(|_| ())
-                .map_err(|e| Error::TableInitialization {
-                    name: T::TABLE.to_string(),
-                    source: e,
-                })?;
-            Ok(())
-        }));
-        self
+        fn inner(
+            mut builder: MiniDBBuilder,
+            table: TableDefinition<'static, &'static str, &[u8]>,
+        ) -> MiniDBBuilder {
+            builder.initializers.push(Box::new(move |txn| {
+                txn.open_table(table)
+                    .map(|_| ())
+                    .map_err(|e| Error::TableInitialization {
+                        name: table.to_string(),
+                        source: e,
+                    })?;
+                Ok(())
+            }));
+            builder
+        }
+
+        inner(self, T::TABLE)
     }
 
     /// Sets the key source
@@ -295,7 +302,7 @@ impl MiniDBBuilder {
     ///
     /// // create a MiniDB with an IPC server path
     /// let db = MiniDB::builder()
-    ///     .ipc_path(r"\\.\pipe\minidb");
+    ///     .ipc_path("/tmp/minidb_example.sock");
     /// ```
     #[must_use]
     pub fn ipc_path<P>(mut self, path: P) -> Self
@@ -323,7 +330,7 @@ impl MiniDBBuilder {
     ///
     /// // create a MiniDB with an IPC server path
     /// let db = MiniDB::builder()
-    ///     .set_ipc_path(Some(r"\\.\pipe\minidb"));
+    ///     .set_ipc_path(Some("/tmp/minidb_example.sock"));
     /// ```
     #[must_use]
     pub fn set_ipc_path<P>(mut self, path: Option<P>) -> Self
@@ -358,7 +365,7 @@ impl MiniDBBuilder {
     /// ```
     pub fn open(self) -> Result<MiniDB> {
         if let Some(pipe_path) = &self.ipc_path
-            && let Ok(ipc_client) = IpcClient::connect(pipe_path.to_string_lossy())
+            && let Ok(ipc_client) = IpcClient::connect(&pipe_path.to_string_lossy())
         {
             let mut store = MiniDB {
                 backend: Backend::Ipc(ipc_client),
